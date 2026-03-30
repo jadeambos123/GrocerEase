@@ -1,8 +1,9 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
+from django.views.static import serve
 from rest_framework.authtoken import views as auth_views  # Use as auth_views
 from grocery import views as grocery_views  # Use as grocery_views
 
@@ -36,5 +37,5 @@ urlpatterns = [
     path('api/cart/', grocery_views.get_cart, name='get-cart'),
     path('api/cart/add/', grocery_views.add_to_cart, name='add-to-cart'),
     path('api/cart/remove/<int:cart_id>/', grocery_views.remove_from_cart, name='remove-from-cart'),
-
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT})
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
