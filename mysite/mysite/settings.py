@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-i#8t1m$t+#s*-2(q9v6#4f5kh!=j8slnf4ayap%hq_s3)o71y7'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     'grocerease-3.onrender.com',
