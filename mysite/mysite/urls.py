@@ -2,10 +2,19 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
 from rest_framework.authtoken import views as auth_views  # Use as auth_views
 from grocery import views as grocery_views  # Use as grocery_views
 
+
+def home(request):
+    return JsonResponse({
+        'message': 'Grocery API is running',
+        'backend': 'Render',
+    })
+
 urlpatterns = [
+    path('', home),
     path('admin/', admin.site.urls),
     
     # Products & Categories
