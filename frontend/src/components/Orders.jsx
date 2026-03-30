@@ -8,9 +8,13 @@ const OrdersPage = ({ showToast, onCartUpdated }) => {
   const token = localStorage.getItem('token');
   const navigate = useNavigate();
 
+  // Define the base URL for Render
+  const API_BASE_URL = 'https://grocerease-3.onrender.com';
+
   useEffect(() => {
     if (!token) return;
-    axios.get('http://127.0.0.1:8000/api/orders/', { headers: { Authorization: `Token ${token}` } })
+    // UPDATED: Changed from 127.0.0.1 to API_BASE_URL
+    axios.get(`${API_BASE_URL}/api/orders/`, { headers: { Authorization: `Token ${token}` } })
       .then(res => setOrders(res.data))
       .catch(() => showToast('Failed to load orders.', 'error'))
       .finally(() => setLoading(false));
@@ -18,7 +22,8 @@ const OrdersPage = ({ showToast, onCartUpdated }) => {
 
   const handleReorder = async (orderId) => {
     try {
-      await axios.post(`http://127.0.0.1:8000/api/orders/${orderId}/reorder/`, {}, { headers: { Authorization: `Token ${token}` } });
+      // UPDATED: Changed from 127.0.0.1 to API_BASE_URL
+      await axios.post(`${API_BASE_URL}/api/orders/${orderId}/reorder/`, {}, { headers: { Authorization: `Token ${token}` } });
       showToast('Order added to cart.', 'success');
       onCartUpdated?.();
       navigate('/cart');

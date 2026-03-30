@@ -13,9 +13,13 @@ const ProfilePage = ({ showToast, onProfileUpdated }) => {
   const [previewImage, setPreviewImage] = useState(null);
   const token = localStorage.getItem('token');
 
+  // Define the base URL for Render
+  const API_BASE_URL = 'https://grocerease-3.onrender.com';
+
   useEffect(() => {
     if (!token) return;
-    axios.get('http://127.0.0.1:8000/api/profile/', { headers: { Authorization: `Token ${token}` } })
+    // UPDATED: Changed from local to Render
+    axios.get(`${API_BASE_URL}/api/profile/`, { headers: { Authorization: `Token ${token}` } })
       .then(res => {
         setProfile(res.data);
         setFirstName(res.data.first_name || '');
@@ -49,8 +53,9 @@ const ProfilePage = ({ showToast, onProfileUpdated }) => {
       if (selectedImage) {
         formData.append('profile_image', selectedImage);
       }
+      // UPDATED: Changed from local to Render
       const res = await axios.put(
-        'http://127.0.0.1:8000/api/profile/update/',
+        `${API_BASE_URL}/api/profile/update/`,
         formData,
         { headers: { Authorization: `Token ${token}` } }
       );
