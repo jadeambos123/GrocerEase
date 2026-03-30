@@ -107,8 +107,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Specific origins allowed to talk to this backend
 CORS_ALLOWED_ORIGINS = [
     "https://earnest-bonbon-20a196.netlify.app",
+    "https://grocerease-3.onrender.com",
     "http://localhost:3000",
+    "http://localhost:5173",  # Add this if you are using Vite!
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
 ]
 
 # Allow credentials for Token-based auth
