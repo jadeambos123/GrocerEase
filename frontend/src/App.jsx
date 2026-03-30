@@ -5,6 +5,11 @@ import OrdersPage from './components/Orders';
 import ProfilePage from './components/Profile';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// API BASE URL  — change this to switch environments
+// ─────────────────────────────────────────────────────────────────────────────
+const API_BASE_URL = "https://grocerease-3.onrender.com";
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ICONS  (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
 const CartIcon = () => (
@@ -232,14 +237,29 @@ const SkeletonCard = () => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PRODUCT CARD  (reusable)
+// IMAGE FALLBACK PLACEHOLDER
+// ─────────────────────────────────────────────────────────────────────────────
+const IMG_PLACEHOLDER = 'https://placehold.co/400x400?text=No+Image';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRODUCT CARD  (reusable) — with onError image fallback
 // ─────────────────────────────────────────────────────────────────────────────
 const ProductCard = ({ p, onAddToCart, addingId }) => (
   <div className="prod-card">
     <div style={{height:148,background:C.paleGreen,overflow:'hidden'}}>
       {p.image
-        ? <img src={p.image} alt={p.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';}}/>
-        : null}
+        ? <img
+            src={p.image}
+            alt={p.name}
+            style={{width:'100%',height:'100%',objectFit:'cover'}}
+            onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
+          />
+        : <img
+            src={IMG_PLACEHOLDER}
+            alt={p.name}
+            style={{width:'100%',height:'100%',objectFit:'cover'}}
+          />
+      }
     </div>
     <div style={{padding:'12px 14px 14px'}}>
       {p.category_name && <div style={{fontSize:11,fontWeight:600,color:C.tagColor,marginBottom:2}}>{p.category_name}</div>}
@@ -300,7 +320,12 @@ const HeroBanner = ({ displayName, motto, profileImage, animate }) => (
         <div style={{display:'flex',alignItems:'center',gap:20,marginBottom:24}}>
           <div style={{width:100,height:100,borderRadius:'50%',background:'#fff',display:'grid',placeItems:'center',boxShadow:'0 14px 36px rgba(0,0,0,0.09)'}}>
             {profileImage ? (
-              <img src={profileImage} alt="Profile" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}} />
+              <img
+                src={profileImage}
+                alt="Profile"
+                style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}
+                onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
+              />
             ) : (
               <span style={{fontSize:32,color:C.deepGreen}}>👋</span>
             )}
@@ -360,7 +385,7 @@ const HeroBanner = ({ displayName, motto, profileImage, animate }) => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HOME PAGE  — FIXED: products now render correctly
+// HOME PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 const HomePage = ({ showToast, onCartUpdated, displayName }) => {
   const [products, setProducts]     = useState([]);
@@ -391,14 +416,14 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
-    axios.get('http://127.0.0.1:8000/api/profile/', { headers: { Authorization: `Token ${token}` } })
+    axios.get(`${API_BASE_URL}/api/profile/`, { headers: { Authorization: `Token ${token}` } })
       .then(res => setProfileImage(res.data.profile_image || null))
       .catch(() => setProfileImage(null));
   }, []);
 
   // Load categories once
   useEffect(() => {
-    axios.get('http://127.0.0.1:8000/api/categories/')
+    axios.get(`${API_BASE_URL}/api/categories/`)
       .then(r => setCategories(r.data))
       .catch(() => {});
   }, []);
@@ -407,8 +432,8 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
   useEffect(() => {
     setLoading(true);
     const url = selectedCategory
-      ? `http://127.0.0.1:8000/api/products/?category=${selectedCategory}`
-      : 'http://127.0.0.1:8000/api/products/';
+      ? `${API_BASE_URL}/api/products/?category=${selectedCategory}`
+      : `${API_BASE_URL}/api/products/`;
     axios.get(url)
       .then(r => setProducts(Array.isArray(r.data) ? r.data : []))
       .catch(() => showToast('Could not load products.', 'error'))
@@ -420,14 +445,18 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
     if (!token) { showToast('Please log in first!', 'info'); navigate('/login'); return; }
     setAddingId(productId);
     try {
-      await axios.post('http://127.0.0.1:8000/api/cart/add/', { product_id: productId, quantity: 1 }, { headers: { Authorization: `Token ${token}` } });
+      await axios.post(
+        `${API_BASE_URL}/api/cart/add/`,
+        { product_id: productId, quantity: 1 },
+        { headers: { Authorization: `Token ${token}` } }
+      );
       showToast(`${productName} added! 🛒`, 'success');
       onCartUpdated?.();
     } catch { showToast('Failed to add item.', 'error'); }
     finally { setAddingId(null); }
   };
 
-  // Show first 4 products as "featured" when no category filter
+  // Show first 8 products as "featured" when no category filter
   const displayProducts = selectedCategory ? products : products.slice(0, 8);
 
   return (
@@ -448,11 +477,13 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
               style={{minWidth:110,background:'#fff',border:selectedCategory===cat.id?`2px solid ${C.deepGreen}`:`1px solid ${C.border}`,borderRadius:12,padding:'14px 10px',textAlign:'center',cursor:'pointer',flexShrink:0,transition:'border 0.15s'}}
             >
               <div style={{height:56,borderRadius:8,marginBottom:10,overflow:'hidden',background:C.paleGreen}}>
-                {cat.image ? (
-                  <img src={cat.image} alt={cat.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e => { e.target.style.display='none'; }}/>
-                ) : (
-                  <div style={{width:'100%',height:'100%',background:C.paleGreen}} />
-                )}
+                {/* Category image with fallback */}
+                <img
+                  src={cat.image || IMG_PLACEHOLDER}
+                  alt={cat.name}
+                  style={{width:'100%',height:'100%',objectFit:'cover'}}
+                  onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
+                />
               </div>
               <span style={{fontSize:13,fontWeight:600,color:C.textDark}}>{cat.name}</span>
             </div>
@@ -507,14 +538,14 @@ const ProductList = ({ showToast, onCartUpdated }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('http://127.0.0.1:8000/api/categories/').then(r => setCategories(r.data)).catch(()=>{});
+    axios.get(`${API_BASE_URL}/api/categories/`).then(r => setCategories(r.data)).catch(()=>{});
   }, []);
 
   useEffect(() => {
     setLoading(true);
     const url = selectedCategory
-      ? `http://127.0.0.1:8000/api/products/?category=${selectedCategory}`
-      : 'http://127.0.0.1:8000/api/products/';
+      ? `${API_BASE_URL}/api/products/?category=${selectedCategory}`
+      : `${API_BASE_URL}/api/products/`;
     axios.get(url)
       .then(r => setProducts(Array.isArray(r.data) ? r.data : []))
       .catch(() => showToast('Could not load products.', 'error'))
@@ -526,7 +557,11 @@ const ProductList = ({ showToast, onCartUpdated }) => {
     if (!token) { showToast('Please log in first!', 'info'); navigate('/login'); return; }
     setAddingId(productId);
     try {
-      await axios.post('http://127.0.0.1:8000/api/cart/add/', { product_id: productId, quantity: 1 }, { headers: { Authorization: `Token ${token}` } });
+      await axios.post(
+        `${API_BASE_URL}/api/cart/add/`,
+        { product_id: productId, quantity: 1 },
+        { headers: { Authorization: `Token ${token}` } }
+      );
       showToast(`${productName} added! 🛒`, 'success');
       onCartUpdated?.();
     } catch { showToast('Failed to add item.', 'error'); }
@@ -602,7 +637,7 @@ const Login = ({ onLoginSuccess, showToast }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post('http://127.0.0.1:8000/api-token-auth/', { username: identifier, password });
+      const res = await axios.post(`${API_BASE_URL}/api-token-auth/`, { username: identifier, password });
       localStorage.setItem('token', res.data.token);
       onLoginSuccess(identifier);
       showToast(`Welcome back! 👋`, 'success');
@@ -671,7 +706,7 @@ const Register = ({ showToast }) => {
     if (password !== confirmPassword) { showToast('Passwords do not match.', 'error'); return; }
     setLoading(true);
     try {
-      await axios.post('http://127.0.0.1:8000/api/register/', { username, email, password });
+      await axios.post(`${API_BASE_URL}/api/register/`, { username, email, password });
       showToast('Account created! Sign in now.', 'success');
       navigate('/login');
     } catch { showToast('Registration failed.', 'error'); }
@@ -710,11 +745,11 @@ const Register = ({ showToast }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CART  — redesigned to match screenshot exactly
+// CART
 // ─────────────────────────────────────────────────────────────────────────────
 const Cart = ({ showToast, onCartUpdated }) => {
   const [cartItems, setCartItems] = useState([]);
-  const [quantities, setQuantities] = useState({});  // local qty state for interactivity
+  const [quantities, setQuantities] = useState({});
   const [loading, setLoading]     = useState(true);
   const [coupon, setCoupon]       = useState('');
   const token   = localStorage.getItem('token');
@@ -722,11 +757,10 @@ const Cart = ({ showToast, onCartUpdated }) => {
 
   const fetchCart = useCallback(() => {
     if (!token) return;
-    axios.get('http://127.0.0.1:8000/api/cart/', { headers: { Authorization: `Token ${token}` } })
+    axios.get(`${API_BASE_URL}/api/cart/`, { headers: { Authorization: `Token ${token}` } })
       .then(res => {
         const items = res.data;
         setCartItems(items);
-        // init local quantities from api
         const qmap = {};
         items.forEach(i => { qmap[i.id] = i.quantity || 1; });
         setQuantities(qmap);
@@ -738,7 +772,10 @@ const Cart = ({ showToast, onCartUpdated }) => {
 
   const removeItem = async (cartId) => {
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/cart/remove/${cartId}/`, { headers: { Authorization: `Token ${token}` } });
+      await axios.delete(
+        `${API_BASE_URL}/api/cart/remove/${cartId}/`,
+        { headers: { Authorization: `Token ${token}` } }
+      );
       showToast('Item removed', 'info');
       fetchCart();
       onCartUpdated?.();
@@ -801,7 +838,12 @@ const Cart = ({ showToast, onCartUpdated }) => {
                     {/* Product col */}
                     <div style={{display:'flex',alignItems:'center',gap:11}}>
                       <div style={{width:42,height:42,borderRadius:8,background:C.paleGreen,flexShrink:0,overflow:'hidden'}}>
-                        {item.product_image && <img src={item.product_image} alt={item.product_name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>}
+                        <img
+                          src={item.product_image || IMG_PLACEHOLDER}
+                          alt={item.product_name}
+                          style={{width:'100%',height:'100%',objectFit:'cover'}}
+                          onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
+                        />
                       </div>
                       <span style={{fontSize:14,fontWeight:600,color:C.textDark,lineHeight:1.35}}>{item.product_name}</span>
                     </div>
@@ -867,7 +909,7 @@ const Cart = ({ showToast, onCartUpdated }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CHECKOUT  — new page matching Image 3
+// CHECKOUT
 // ─────────────────────────────────────────────────────────────────────────────
 const Checkout = ({ showToast, onCartUpdated }) => {
   const [cartItems, setCartItems] = useState([]);
@@ -887,7 +929,7 @@ const Checkout = ({ showToast, onCartUpdated }) => {
 
   useEffect(() => {
     if (!token) { navigate('/login'); return; }
-    axios.get('http://127.0.0.1:8000/api/cart/', { headers: { Authorization: `Token ${token}` } })
+    axios.get(`${API_BASE_URL}/api/cart/`, { headers: { Authorization: `Token ${token}` } })
       .then(res => setCartItems(res.data))
       .finally(() => setLoading(false));
   }, [token, navigate]);
@@ -903,15 +945,19 @@ const Checkout = ({ showToast, onCartUpdated }) => {
     setPlacing(true);
     const token = localStorage.getItem('token');
     try {
-      await axios.post('http://127.0.0.1:8000/api/orders/place/', {
-        first_name: firstName,
-        last_name: lastName,
-        address,
-        city,
-        contact,
-        notes,
-        payment_method: payMethod,
-      }, { headers: { Authorization: `Token ${token}` } });
+      await axios.post(
+        `${API_BASE_URL}/api/orders/place/`,
+        {
+          first_name: firstName,
+          last_name: lastName,
+          address,
+          city,
+          contact,
+          notes,
+          payment_method: payMethod,
+        },
+        { headers: { Authorization: `Token ${token}` } }
+      );
       showToast('Order placed successfully! 🎉', 'success');
       onCartUpdated?.();
       navigate('/orders');
@@ -1024,7 +1070,7 @@ const Checkout = ({ showToast, onCartUpdated }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// APP ROOT  (logic unchanged)
+// APP ROOT
 // ─────────────────────────────────────────────────────────────────────────────
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
@@ -1042,7 +1088,10 @@ export default function App() {
   const loadCartCount = useCallback(async () => {
     if (!token) { setCartCount(0); return; }
     try {
-      const res = await axios.get('http://127.0.0.1:8000/api/cart/', { headers: { Authorization: `Token ${token}` } });
+      const res = await axios.get(
+        `${API_BASE_URL}/api/cart/`,
+        { headers: { Authorization: `Token ${token}` } }
+      );
       const count = res.data.reduce((sum, item) => sum + (item.quantity || 1), 0);
       setCartCount(count);
     } catch { setCartCount(0); }
@@ -1053,7 +1102,7 @@ export default function App() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
-    axios.get('http://127.0.0.1:8000/api/profile/', { headers: { Authorization: `Token ${token}` } })
+    axios.get(`${API_BASE_URL}/api/profile/`, { headers: { Authorization: `Token ${token}` } })
       .then(res => {
         const name = res.data.first_name || res.data.username || '';
         setDisplayName(name);
