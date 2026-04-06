@@ -19,6 +19,7 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = [
     'grocerease-3.onrender.com',
+    'grocer-ease-gyrgf2i23-jadeambos123s-projects.vercel.app',
     'localhost',
     '127.0.0.1',
 ]
@@ -107,6 +108,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Specific origins allowed to talk to this backend
 CORS_ALLOWED_ORIGINS = [
     "https://earnest-bonbon-20a196.netlify.app",
+    "grocer-ease-gyrgf2i23-jadeambos123s-projects.vercel.app",
     "https://grocerease-3.onrender.com",
     "http://localhost:3000",
     "http://localhost:5173",  # Add this if you are using Vite!
