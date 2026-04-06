@@ -10,7 +10,7 @@ import ProfilePage from './components/Profile';
 const API_BASE_URL = "https://grocerease-3.onrender.com";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ICONS  (unchanged)
+// ICONS
 // ─────────────────────────────────────────────────────────────────────────────
 const CartIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -139,7 +139,7 @@ const GlobalStyles = () => (
 
     .atc-btn { width:100%; padding:9px 0; background:${C.deepGreen}; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; transition:background 0.16s; }
     .atc-btn:hover:not(:disabled) { background:${C.midGreen}; }
-    .atc-btn:disabled { opacity:0.6; cursor:not-allowed; }
+    .atc-btn:disabled { opacity:0.7; cursor:not-allowed; }
 
     .primary-btn { background:${C.deepGreen}; color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:700; padding:13px; width:100%; transition:background 0.18s; cursor:pointer; }
     .primary-btn:hover:not(:disabled) { background:${C.midGreen}; }
@@ -186,7 +186,7 @@ const GlobalStyles = () => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TOAST  (logic unchanged)
+// TOAST
 // ─────────────────────────────────────────────────────────────────────────────
 const Toast = ({ toast, onDismiss }) => {
   const [vis, setVis] = useState(false);
@@ -242,35 +242,69 @@ const SkeletonCard = () => (
 const IMG_PLACEHOLDER = 'https://placehold.co/400x400?text=No+Image';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PRODUCT CARD  (reusable) — with onError image fallback
+// STOCK BADGE
 // ─────────────────────────────────────────────────────────────────────────────
-const ProductCard = ({ p, onAddToCart, addingId }) => (
-  <div className="prod-card">
-    <div style={{height:148,background:C.paleGreen,overflow:'hidden'}}>
-      {p.image
-        ? <img
-            src={p.image}
-            alt={p.name}
-            style={{width:'100%',height:'100%',objectFit:'cover'}}
-            onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
-          />
-        : <img
-            src={IMG_PLACEHOLDER}
-            alt={p.name}
-            style={{width:'100%',height:'100%',objectFit:'cover'}}
-          />
-      }
+const StockBadge = ({ stock }) => {
+  const base = {
+    position: 'absolute', top: 8, right: 8,
+    fontSize: 11, fontWeight: 600, padding: '3px 9px',
+    borderRadius: 20, letterSpacing: '0.01em',
+  };
+  if (stock === 0) return (
+    <div style={{ ...base, background: '#FCEBEB', color: '#791F1F' }}>Out of stock</div>
+  );
+  if (stock <= 5) return (
+    <div style={{ ...base, background: '#FAEEDA', color: '#633806' }}>Only {stock} left</div>
+  );
+  return (
+    <div style={{ ...base, background: '#EAF3DE', color: '#27500A' }}>In stock</div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRODUCT CARD
+// ─────────────────────────────────────────────────────────────────────────────
+const ProductCard = ({ p, onAddToCart, addingId }) => {
+  const outOfStock = p.stock === 0;
+  return (
+    <div className="prod-card" style={{ opacity: outOfStock ? 0.6 : 1 }}>
+      <div style={{ height: 148, background: C.paleGreen, overflow: 'hidden', position: 'relative' }}>
+        {p.image
+          ? <img
+              src={p.image}
+              alt={p.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', filter: outOfStock ? 'grayscale(60%)' : 'none' }}
+              onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
+            />
+          : <img
+              src={IMG_PLACEHOLDER}
+              alt={p.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+        }
+        <StockBadge stock={p.stock} />
+      </div>
+      <div style={{ padding: '12px 14px 14px' }}>
+        {p.category_name && (
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.tagColor, marginBottom: 2 }}>{p.category_name}</div>
+        )}
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.textDark, marginBottom: 3 }}>{p.name}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: C.textMid, marginBottom: 12 }}>₱{p.price}</div>
+        <button
+          className="atc-btn"
+          onClick={() => onAddToCart(p.id, p.name)}
+          disabled={outOfStock || addingId === p.id}
+          style={{
+            background: outOfStock ? '#9e9e9e' : undefined,
+            cursor: outOfStock ? 'not-allowed' : undefined,
+          }}
+        >
+          {outOfStock ? 'Out of Stock' : addingId === p.id ? 'Adding…' : 'Add to Cart'}
+        </button>
+      </div>
     </div>
-    <div style={{padding:'12px 14px 14px'}}>
-      {p.category_name && <div style={{fontSize:11,fontWeight:600,color:C.tagColor,marginBottom:2}}>{p.category_name}</div>}
-      <div style={{fontSize:14,fontWeight:700,color:C.textDark,marginBottom:3}}>{p.name}</div>
-      <div style={{fontSize:13,fontWeight:600,color:C.textMid,marginBottom:12}}>₱{p.price}</div>
-      <button className="atc-btn" onClick={()=>onAddToCart(p.id,p.name)} disabled={addingId===p.id}>
-        {addingId===p.id ? 'Adding…' : 'Add to Cart'}
-      </button>
-    </div>
-  </div>
-);
+  );
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NAVBAR
@@ -355,7 +389,6 @@ const HeroBanner = ({ displayName, motto, profileImage, animate }) => (
             <div style={{fontSize:15,fontWeight:700,color:C.textDark,marginTop:4}}>Delivered to you</div>
           </div>
         </div>
-
         <div style={{display:'grid',gap:14}}>
           {[
             { label: 'Farm-fresh ingredients', value: 'Picked daily' },
@@ -371,7 +404,6 @@ const HeroBanner = ({ displayName, motto, profileImage, animate }) => (
             </div>
           ))}
         </div>
-
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:14,flexWrap:'wrap'}}>
           <div>
             <div style={{fontSize:24,fontWeight:800,color:C.deepGreen}}>20% OFF</div>
@@ -388,13 +420,13 @@ const HeroBanner = ({ displayName, motto, profileImage, animate }) => (
 // HOME PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 const HomePage = ({ showToast, onCartUpdated, displayName }) => {
-  const [products, setProducts]     = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [products, setProducts]       = useState([]);
+  const [categories, setCategories]   = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [addingId, setAddingId]     = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [addingId, setAddingId]       = useState(null);
   const [heroVisible, setHeroVisible] = useState(false);
-  const [heroMotto, setHeroMotto] = useState('Enjoy personalized grocery picks and fast delivery to your door.');
+  const [heroMotto, setHeroMotto]     = useState('Enjoy personalized grocery picks and fast delivery to your door.');
   const [profileImage, setProfileImage] = useState(null);
   const navigate = useNavigate();
 
@@ -407,8 +439,7 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
       'Shop today, receive fresh tomorrow.',
       'Healthy groceries made easy.'
     ];
-    const randomMotto = mottoOptions[Math.floor(Math.random() * mottoOptions.length)];
-    setHeroMotto(randomMotto);
+    setHeroMotto(mottoOptions[Math.floor(Math.random() * mottoOptions.length)]);
     const timer = setTimeout(() => setHeroVisible(true), 30);
     return () => clearTimeout(timer);
   }, []);
@@ -421,14 +452,12 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
       .catch(() => setProfileImage(null));
   }, []);
 
-  // Load categories once
   useEffect(() => {
     axios.get(`${API_BASE_URL}/api/categories/`)
       .then(r => setCategories(r.data))
       .catch(() => {});
   }, []);
 
-  // Load products whenever category changes
   useEffect(() => {
     setLoading(true);
     const url = selectedCategory
@@ -456,7 +485,6 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
     finally { setAddingId(null); }
   };
 
-  // Show first 8 products as "featured" when no category filter
   const displayProducts = selectedCategory ? products : products.slice(0, 8);
 
   return (
@@ -477,7 +505,6 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
               style={{minWidth:110,background:'#fff',border:selectedCategory===cat.id?`2px solid ${C.deepGreen}`:`1px solid ${C.border}`,borderRadius:12,padding:'14px 10px',textAlign:'center',cursor:'pointer',flexShrink:0,transition:'border 0.15s'}}
             >
               <div style={{height:56,borderRadius:8,marginBottom:10,overflow:'hidden',background:C.paleGreen}}>
-                {/* Category image with fallback */}
                 <img
                   src={cat.image || IMG_PLACEHOLDER}
                   alt={cat.name}
@@ -691,14 +718,14 @@ const Login = ({ onLoginSuccess, showToast }) => {
 // REGISTER
 // ─────────────────────────────────────────────────────────────────────────────
 const Register = ({ showToast }) => {
-  const [firstName, setFirstName]               = useState('');
-  const [lastName, setLastName]                 = useState('');
-  const [username, setUsername]                 = useState('');
-  const [email, setEmail]                       = useState('');
-  const [phone, setPhone]                       = useState('');
-  const [password, setPassword]                 = useState('');
-  const [confirmPassword, setConfirmPassword]   = useState('');
-  const [loading, setLoading]                   = useState(false);
+  const [firstName, setFirstName]             = useState('');
+  const [lastName, setLastName]               = useState('');
+  const [username, setUsername]               = useState('');
+  const [email, setEmail]                     = useState('');
+  const [phone, setPhone]                     = useState('');
+  const [password, setPassword]               = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading]                 = useState(false);
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
@@ -748,10 +775,10 @@ const Register = ({ showToast }) => {
 // CART
 // ─────────────────────────────────────────────────────────────────────────────
 const Cart = ({ showToast, onCartUpdated }) => {
-  const [cartItems, setCartItems] = useState([]);
+  const [cartItems, setCartItems]   = useState([]);
   const [quantities, setQuantities] = useState({});
-  const [loading, setLoading]     = useState(true);
-  const [coupon, setCoupon]       = useState('');
+  const [loading, setLoading]       = useState(true);
+  const [coupon, setCoupon]         = useState('');
   const token   = localStorage.getItem('token');
   const navigate = useNavigate();
 
@@ -818,7 +845,6 @@ const Cart = ({ showToast, onCartUpdated }) => {
           {/* Left: cart table */}
           <div>
             <div style={{background:'#fff',borderRadius:12,overflow:'hidden',border:`1px solid ${C.border}`}}>
-              {/* Table header */}
               <div style={{display:'grid',gridTemplateColumns:'2.5fr 1fr 1.4fr 1fr 36px',background:C.deepGreen,padding:'12px 18px',gap:8}}>
                 {['Product','Price','Quantity','Subtotal',''].map((h,i)=>(
                   <div key={i} style={{fontSize:13,fontWeight:700,color:'#fff'}}>{h}</div>
@@ -835,7 +861,6 @@ const Cart = ({ showToast, onCartUpdated }) => {
                 const lineTotal = (parseFloat(item.product_price||0) * qty).toFixed(0);
                 return (
                   <div key={item.id} style={{display:'grid',gridTemplateColumns:'2.5fr 1fr 1.4fr 1fr 36px',padding:'14px 18px',gap:8,alignItems:'center',borderBottom:`1px solid ${C.border}`}}>
-                    {/* Product col */}
                     <div style={{display:'flex',alignItems:'center',gap:11}}>
                       <div style={{width:42,height:42,borderRadius:8,background:C.paleGreen,flexShrink:0,overflow:'hidden'}}>
                         <img
@@ -847,17 +872,13 @@ const Cart = ({ showToast, onCartUpdated }) => {
                       </div>
                       <span style={{fontSize:14,fontWeight:600,color:C.textDark,lineHeight:1.35}}>{item.product_name}</span>
                     </div>
-                    {/* Price */}
                     <div style={{fontSize:14,color:C.textMid,fontWeight:500}}>₱{item.product_price}</div>
-                    {/* Qty controls */}
                     <div style={{display:'flex',alignItems:'center',gap:6}}>
                       <button className="qty-btn" onClick={()=>changeQty(item.id,-1)}>−</button>
                       <span style={{fontSize:14,fontWeight:700,minWidth:20,textAlign:'center'}}>{qty}</span>
                       <button className="qty-btn" onClick={()=>changeQty(item.id,1)}>+</button>
                     </div>
-                    {/* Subtotal */}
                     <div style={{fontSize:14,fontWeight:700,color:C.deepGreen}}>₱{lineTotal}</div>
-                    {/* Remove */}
                     <button className="remove-btn" onClick={()=>removeItem(item.id)} title="Remove item">
                       <XIcon/>
                     </button>
@@ -866,7 +887,6 @@ const Cart = ({ showToast, onCartUpdated }) => {
               })}
             </div>
 
-            {/* Coupon row */}
             <div style={{display:'flex',gap:12,marginTop:14}}>
               <input type="text" placeholder="Enter coupon code" value={coupon} onChange={e=>setCoupon(e.target.value)}
                 style={{flex:1,padding:'10px 16px',borderRadius:9,border:`1px solid ${C.border}`,fontSize:14,background:'#fff',color:C.textDark}}/>
@@ -919,13 +939,12 @@ const Checkout = ({ showToast, onCartUpdated }) => {
   const token = localStorage.getItem('token');
   const navigate = useNavigate();
 
-  // Form fields
-  const [firstName, setFirstName]   = useState('');
-  const [lastName, setLastName]     = useState('');
-  const [address, setAddress]       = useState('');
-  const [city, setCity]             = useState('');
-  const [contact, setContact]       = useState('');
-  const [notes, setNotes]           = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName]   = useState('');
+  const [address, setAddress]     = useState('');
+  const [city, setCity]           = useState('');
+  const [contact, setContact]     = useState('');
+  const [notes, setNotes]         = useState('');
 
   useEffect(() => {
     if (!token) { navigate('/login'); return; }
@@ -943,19 +962,10 @@ const Checkout = ({ showToast, onCartUpdated }) => {
       return;
     }
     setPlacing(true);
-    const token = localStorage.getItem('token');
     try {
       await axios.post(
         `${API_BASE_URL}/api/orders/place/`,
-        {
-          first_name: firstName,
-          last_name: lastName,
-          address,
-          city,
-          contact,
-          notes,
-          payment_method: payMethod,
-        },
+        { first_name: firstName, last_name: lastName, address, city, contact, notes, payment_method: payMethod },
         { headers: { Authorization: `Token ${token}` } }
       );
       showToast('Order placed successfully! 🎉', 'success');
@@ -979,9 +989,7 @@ const Checkout = ({ showToast, onCartUpdated }) => {
         <form onSubmit={handlePlaceOrder}>
           <div className="checkout-grid" style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:24,alignItems:'start'}}>
 
-            {/* Left: delivery + payment */}
             <div>
-              {/* Delivery info */}
               <div style={sectionBox}>
                 <h3 style={{fontSize:15,fontWeight:700,color:C.textDark,marginBottom:18,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>1. Delivery Information</h3>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14}}>
@@ -1014,7 +1022,6 @@ const Checkout = ({ showToast, onCartUpdated }) => {
                 </div>
               </div>
 
-              {/* Payment method */}
               <div style={sectionBox}>
                 <h3 style={{fontSize:15,fontWeight:700,color:C.textDark,marginBottom:16,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>2. Payment Method</h3>
                 <div style={{display:'flex',gap:12,marginBottom:14}}>
@@ -1034,8 +1041,6 @@ const Checkout = ({ showToast, onCartUpdated }) => {
             {/* Right: Order Summary */}
             <div style={{background:'#fff',borderRadius:12,border:`1px solid ${C.border}`,padding:'22px 20px',position:'sticky',top:20}}>
               <h3 style={{fontSize:16,fontWeight:800,color:C.textDark,marginBottom:18}}>Order Summary</h3>
-
-              {/* Item list */}
               <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
                 {cartItems.map(item => (
                   <div key={item.id} style={{display:'flex',justifyContent:'space-between',fontSize:13,color:C.textMid}}>
@@ -1044,7 +1049,6 @@ const Checkout = ({ showToast, onCartUpdated }) => {
                   </div>
                 ))}
               </div>
-
               <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12,display:'flex',flexDirection:'column',gap:10,marginBottom:18}}>
                 <div style={{display:'flex',justifyContent:'space-between',fontSize:14,color:C.textMid}}>
                   <span>Subtotal</span><span style={{fontWeight:600,color:C.textDark}}>₱{subtotal.toFixed(0)}</span>
@@ -1057,7 +1061,6 @@ const Checkout = ({ showToast, onCartUpdated }) => {
                   <span style={{fontSize:16,fontWeight:800,color:C.textDark}}>₱{subtotal.toFixed(0)}</span>
                 </div>
               </div>
-
               <button type="submit" className="place-order-btn" disabled={placing}>
                 <CheckIcon/> {placing ? 'Placing Order…' : 'Place Order'}
               </button>
@@ -1128,14 +1131,14 @@ export default function App() {
         <Navbar isLoggedIn={isLoggedIn} onLogout={handleLogout} cartCount={cartCount}/>
         <div style={{display:'flex',flex:1,flexDirection:'column',overflow:'hidden'}}>
           <Routes>
-            <Route path="/"          element={<HomePage    showToast={showToast} onCartUpdated={loadCartCount} displayName={displayName}/>}/>
-            <Route path="/products"  element={<ProductList showToast={showToast} onCartUpdated={loadCartCount}/>}/>
-            <Route path="/login"     element={<Login       onLoginSuccess={()=>{ setIsLoggedIn(true); }} showToast={showToast}/>}/>
-            <Route path="/register"  element={<Register    showToast={showToast}/>}/>
-            <Route path="/cart"      element={<Cart        showToast={showToast} onCartUpdated={loadCartCount}/>}/>
-            <Route path="/checkout"  element={<Checkout    showToast={showToast} onCartUpdated={loadCartCount}/>}/>
-            <Route path="/orders"    element={<OrdersPage  showToast={showToast} onCartUpdated={loadCartCount}/>}/>
-            <Route path="/profile"   element={<ProfilePage showToast={showToast} onProfileUpdated={(name) => { setDisplayName(name); localStorage.setItem('displayName', name); }} />}/>
+            <Route path="/"         element={<HomePage    showToast={showToast} onCartUpdated={loadCartCount} displayName={displayName}/>}/>
+            <Route path="/products" element={<ProductList showToast={showToast} onCartUpdated={loadCartCount}/>}/>
+            <Route path="/login"    element={<Login       onLoginSuccess={()=>{ setIsLoggedIn(true); }} showToast={showToast}/>}/>
+            <Route path="/register" element={<Register    showToast={showToast}/>}/>
+            <Route path="/cart"     element={<Cart        showToast={showToast} onCartUpdated={loadCartCount}/>}/>
+            <Route path="/checkout" element={<Checkout    showToast={showToast} onCartUpdated={loadCartCount}/>}/>
+            <Route path="/orders"   element={<OrdersPage  showToast={showToast} onCartUpdated={loadCartCount}/>}/>
+            <Route path="/profile"  element={<ProfilePage showToast={showToast} onProfileUpdated={(name) => { setDisplayName(name); localStorage.setItem('displayName', name); }} />}/>
           </Routes>
         </div>
         <Footer/>
