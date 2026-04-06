@@ -19,7 +19,7 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = [
     'grocerease-3.onrender.com',
-    'grocer-ease-gyrgf2i23-jadeambos123s-projects.vercel.app',
+    '.vercel.app',
     'localhost',
     '127.0.0.1',
 ]
