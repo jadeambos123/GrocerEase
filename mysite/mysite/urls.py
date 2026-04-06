@@ -4,9 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
 from django.views.static import serve
-from rest_framework.authtoken import views as auth_views  # Use as auth_views
-from grocery import views as grocery_views  # Use as grocery_views
-
+from grocery import views as grocery_views 
 
 def home(request):
     return JsonResponse({
@@ -24,7 +22,9 @@ urlpatterns = [
     
     # Authentication
     path('api/register/', grocery_views.register_user, name='register-user'),
-    path('api-token-auth/', auth_views.obtain_auth_token, name='api-token-auth'),
+    
+    # UPDATED: Use the custom view from grocery_views
+    path('api-token-auth/', grocery_views.CustomAuthToken.as_view(), name='api-token-auth'),
 
     # Orders & profile
     path('api/orders/', grocery_views.get_orders, name='get-orders'),
@@ -37,5 +37,6 @@ urlpatterns = [
     path('api/cart/', grocery_views.get_cart, name='get-cart'),
     path('api/cart/add/', grocery_views.add_to_cart, name='add-to-cart'),
     path('api/cart/remove/<int:cart_id>/', grocery_views.remove_from_cart, name='remove-from-cart'),
+    
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT})
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
