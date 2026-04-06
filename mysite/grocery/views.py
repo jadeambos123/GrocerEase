@@ -1,4 +1,6 @@
 from django.contrib.auth.models import User
+from django.db import transaction  # ADDED: For data integrity
+from django.db.models import F     # ADDED: For safe stock subtraction
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -30,9 +32,6 @@ def register_user(request):
 
 @api_view(['GET'])
 def get_products(request):
-    """
-    Fetches all products, or filters them if a ?category=ID is provided in the URL.
-    """
     category_id = request.query_params.get('category')
     if category_id:
         products = Product.objects.filter(category_id=category_id)
@@ -44,9 +43,6 @@ def get_products(request):
 
 @api_view(['GET'])
 def get_categories(request):
-    """
-    Fetches all available categories for the frontend filter cards.
-    """
     categories = Category.objects.all()
     serializer = CategorySerializer(categories, many=True, context={'request': request})
     return Response(serializer.data)
@@ -77,30 +73,55 @@ def place_order(request):
     if not cart_items.exists():
         return Response({'error': 'Your cart is empty.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    total = sum(item.quantity * item.product.price for item in cart_items)
-    order = Order.objects.create(
-        user=user,
-        first_name=first_name,
-        last_name=last_name,
-        address=address,
-        city=city,
-        contact=contact,
-        notes=notes,
-        payment_method=payment_method,
-        total=total,
-    )
+    # Wrap in a transaction to ensure stock is only deducted if order is fully created
+    try:
+        with transaction.atomic():
+            total = sum(item.quantity * item.product.price for item in cart_items)
+            
+            # Create the main order record
+            order = Order.objects.create(
+                user=user,
+                first_name=first_name,
+                last_name=last_name,
+                address=address,
+                city=city,
+                contact=contact,
+                notes=notes,
+                payment_method=payment_method,
+                total=total,
+            )
 
-    for item in cart_items:
-        OrderItem.objects.create(
-            order=order,
-            product=item.product,
-            product_name=item.product.name,
-            quantity=item.quantity,
-            unit_price=item.product.price,
-        )
+            for item in cart_items:
+                product = item.product
 
-    cart_items.delete()
-    return Response({'message': 'Order placed successfully.', 'order_id': order.id}, status=status.HTTP_201_CREATED)
+                # --- NEW STOCK VALIDATION ---
+                if product.stock < item.quantity:
+                    # Raising an exception inside atomic() will roll back the Order creation
+                    raise ValueError(f"Not enough stock for {product.name}")
+
+                # Create the individual order item
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    product_name=product.name,
+                    quantity=item.quantity,
+                    unit_price=product.price,
+                )
+
+                # --- UPDATED STOCK LOGIC ---
+                # Subtract quantity from the Product model
+                product.stock = F('stock') - item.quantity
+                product.save()
+
+            # Clear user's cart after successful transaction
+            cart_items.delete()
+
+        return Response({'message': 'Order placed successfully.', 'order_id': order.id}, status=status.HTTP_201_CREATED)
+
+    except ValueError as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': 'An error occurred while processing your order.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -124,6 +145,8 @@ def reorder_order(request, order_id):
 
     return Response({'message': 'Order items added to your cart.'}, status=status.HTTP_200_OK)
 
+# --- 4. PROFILE & CART HELPERS ---
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_profile(request):
@@ -131,8 +154,7 @@ def get_profile(request):
     profile, _ = UserProfile.objects.get_or_create(user=user)
     profile_image = None
     if profile.image:
-        request_obj = request
-        profile_image = request_obj.build_absolute_uri(profile.image.url)
+        profile_image = request.build_absolute_uri(profile.image.url)
     return Response({
         'username': user.username,
         'email': user.email,
@@ -141,7 +163,6 @@ def get_profile(request):
         'date_joined': user.date_joined,
         'profile_image': profile_image,
     })
-
 
 @api_view(['PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
@@ -181,26 +202,16 @@ def update_profile(request):
         'profile_image': profile_image_url,
     })
 
-
-# --- 3. SHOPPING CART LOGIC ---
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_cart(request):
-    """
-    Returns the logged-in user's cart items.
-    """
     cart_items = Cart.objects.filter(user=request.user)
-    # Passing context is critical for building absolute image URLs
     serializer = CartSerializer(cart_items, many=True, context={'request': request})
     return Response(serializer.data)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_to_cart(request):
-    """
-    Adds a product to the cart or increments quantity if it already exists.
-    """
     product_id = request.data.get('product_id')
     quantity = request.data.get('quantity', 1)
 
@@ -222,9 +233,6 @@ def add_to_cart(request):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def remove_from_cart(request, cart_id):
-    """
-    Removes a specific item from the user's cart.
-    """
     try:
         item = Cart.objects.get(id=cart_id, user=request.user)
         item.delete()
