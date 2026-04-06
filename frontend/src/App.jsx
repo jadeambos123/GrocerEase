@@ -3,11 +3,34 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react
 import axios from 'axios';
 import OrdersPage from './components/Orders';
 import ProfilePage from './components/Profile';
+import AdminDashboard from './components/AdminDashboard';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// API BASE URL  — change this to switch environments
+// API BASE URL
 // ─────────────────────────────────────────────────────────────────────────────
 const API_BASE_URL = "https://grocerease-3.onrender.com";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UNIT HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+const UNIT_PRESETS = {
+  kg:     [0.25, 0.5, 1, 1.5, 2, 3],
+  g:      [100, 250, 500, 750, 1000],
+  pcs:    [1, 2, 3, 4, 5, 6, 10],
+  pack:   [1, 2, 3, 5],
+  bundle: [1, 2, 3],
+  liter:  [0.5, 1, 1.5, 2],
+  dozen:  [1, 2, 3],
+};
+
+const formatQty = (qty, unit) => {
+  if (unit === 'kg')     return `${qty} kg`;
+  if (unit === 'g')      return `${qty}g`;
+  if (unit === 'liter')  return `${qty}L`;
+  if (unit === 'pcs')    return qty === 1 ? '1 pc' : `${qty} pcs`;
+  if (unit === 'dozen')  return qty === 1 ? '1 dozen' : `${qty} dozens`;
+  return `${qty} ${unit}`;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS
@@ -84,6 +107,11 @@ const PayLaterIcon = () => (
     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
   </svg>
 );
+const AdminIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+  </svg>
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COLORS
@@ -130,6 +158,9 @@ const GlobalStyles = () => (
     .logout-pill { background:transparent; border:1.5px solid rgba(255,255,255,0.45); border-radius:20px; padding:5px 18px; color:#fff; font-size:14px; font-weight:600; transition:background 0.18s; }
     .logout-pill:hover { background:rgba(255,255,255,0.14); }
 
+    .admin-pill { background:rgba(255,255,255,0.1); border:1.5px solid rgba(255,255,255,0.3); border-radius:20px; padding:5px 14px; color:#fff; font-size:13px; font-weight:600; display:flex; align-items:center; gap:5px; transition:background 0.18s; }
+    .admin-pill:hover { background:rgba(255,255,255,0.2); }
+
     .sidebar-btn { display:block; padding:9px 14px; border-radius:8px; font-size:14px; font-weight:500; color:${C.textMid}; cursor:pointer; transition:all 0.15s; border:none; background:none; text-align:left; width:100%; }
     .sidebar-btn:hover { background:${C.paleGreen}; color:${C.deepGreen}; }
     .sidebar-btn.active { background:${C.paleGreen}; color:${C.deepGreen}; font-weight:700; }
@@ -140,6 +171,9 @@ const GlobalStyles = () => (
     .atc-btn { width:100%; padding:9px 0; background:${C.deepGreen}; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; transition:background 0.16s; }
     .atc-btn:hover:not(:disabled) { background:${C.midGreen}; }
     .atc-btn:disabled { opacity:0.7; cursor:not-allowed; }
+
+    .unit-select { width:100%; padding:7px 10px; border-radius:7px; border:1px solid ${C.border}; font-size:13px; font-weight:600; color:${C.textDark}; background:#f9fdf9; cursor:pointer; margin-bottom:8px; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234a5568' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
+    .unit-select:focus { outline:none; border-color:${C.midGreen}; box-shadow:0 0 0 3px rgba(46,125,69,0.1); }
 
     .primary-btn { background:${C.deepGreen}; color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:700; padding:13px; width:100%; transition:background 0.18s; cursor:pointer; }
     .primary-btn:hover:not(:disabled) { background:${C.midGreen}; }
@@ -245,59 +279,60 @@ const IMG_PLACEHOLDER = 'https://placehold.co/400x400?text=No+Image';
 // STOCK BADGE
 // ─────────────────────────────────────────────────────────────────────────────
 const StockBadge = ({ stock }) => {
-  const base = {
-    position: 'absolute', top: 8, right: 8,
-    fontSize: 11, fontWeight: 600, padding: '3px 9px',
-    borderRadius: 20, letterSpacing: '0.01em',
-  };
-  if (stock === 0) return (
-    <div style={{ ...base, background: '#FCEBEB', color: '#791F1F' }}>Out of stock</div>
-  );
-  if (stock <= 5) return (
-    <div style={{ ...base, background: '#FAEEDA', color: '#633806' }}>Only {stock} left</div>
-  );
-  return (
-    <div style={{ ...base, background: '#EAF3DE', color: '#27500A' }}>In stock</div>
-  );
+  const base = { position:'absolute', top:8, right:8, fontSize:11, fontWeight:600, padding:'3px 9px', borderRadius:20, letterSpacing:'0.01em' };
+  if (stock === 0) return <div style={{...base, background:'#FCEBEB', color:'#791F1F'}}>Out of stock</div>;
+  if (stock <= 5)  return <div style={{...base, background:'#FAEEDA', color:'#633806'}}>Only {stock} left</div>;
+  return <div style={{...base, background:'#EAF3DE', color:'#27500A'}}>In stock</div>;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PRODUCT CARD
+// PRODUCT CARD — with unit dropdown
 // ─────────────────────────────────────────────────────────────────────────────
 const ProductCard = ({ p, onAddToCart, addingId }) => {
   const outOfStock = p.stock === 0;
+  const unit       = p.unit || 'pcs';
+  const presets    = UNIT_PRESETS[unit] || [1, 2, 3];
+  const [selectedQty, setSelectedQty] = useState(presets[0]);
+
   return (
     <div className="prod-card" style={{ opacity: outOfStock ? 0.6 : 1 }}>
-      <div style={{ height: 148, background: C.paleGreen, overflow: 'hidden', position: 'relative' }}>
-        {p.image
-          ? <img
-              src={p.image}
-              alt={p.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', filter: outOfStock ? 'grayscale(60%)' : 'none' }}
-              onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
-            />
-          : <img
-              src={IMG_PLACEHOLDER}
-              alt={p.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-        }
+      <div style={{ height:148, background:C.paleGreen, overflow:'hidden', position:'relative' }}>
+        <img
+          src={p.image || IMG_PLACEHOLDER}
+          alt={p.name}
+          style={{ width:'100%', height:'100%', objectFit:'cover', filter: outOfStock ? 'grayscale(60%)' : 'none' }}
+          onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
+        />
         <StockBadge stock={p.stock} />
       </div>
-      <div style={{ padding: '12px 14px 14px' }}>
+      <div style={{ padding:'12px 14px 14px' }}>
         {p.category_name && (
-          <div style={{ fontSize: 11, fontWeight: 600, color: C.tagColor, marginBottom: 2 }}>{p.category_name}</div>
+          <div style={{ fontSize:11, fontWeight:600, color:C.tagColor, marginBottom:2 }}>{p.category_name}</div>
         )}
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.textDark, marginBottom: 3 }}>{p.name}</div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: C.textMid, marginBottom: 12 }}>₱{p.price}</div>
+        <div style={{ fontSize:14, fontWeight:700, color:C.textDark, marginBottom:2 }}>{p.name}</div>
+        <div style={{ fontSize:13, fontWeight:600, color:C.textMid, marginBottom:10 }}>
+          ₱{p.price}
+          <span style={{ fontSize:11, fontWeight:500, color:C.textLight, marginLeft:4 }}>/ {unit}</span>
+        </div>
+
+        {/* Unit Dropdown */}
+        {!outOfStock && (
+          <select
+            className="unit-select"
+            value={selectedQty}
+            onChange={e => setSelectedQty(Number(e.target.value))}
+          >
+            {presets.map(qty => (
+              <option key={qty} value={qty}>{formatQty(qty, unit)}</option>
+            ))}
+          </select>
+        )}
+
         <button
           className="atc-btn"
-          onClick={() => onAddToCart(p.id, p.name)}
+          onClick={() => onAddToCart(p.id, p.name, selectedQty, unit)}
           disabled={outOfStock || addingId === p.id}
-          style={{
-            background: outOfStock ? '#9e9e9e' : undefined,
-            cursor: outOfStock ? 'not-allowed' : undefined,
-          }}
+          style={{ background: outOfStock ? '#9e9e9e' : undefined }}
         >
           {outOfStock ? 'Out of Stock' : addingId === p.id ? 'Adding…' : 'Add to Cart'}
         </button>
@@ -307,9 +342,9 @@ const ProductCard = ({ p, onAddToCart, addingId }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NAVBAR
+// NAVBAR  — uses isAdmin to show Admin link
 // ─────────────────────────────────────────────────────────────────────────────
-const Navbar = ({ isLoggedIn, onLogout, cartCount }) => {
+const Navbar = ({ isLoggedIn, isAdmin, onLogout, cartCount }) => {
   const path = window.location.pathname;
   return (
     <nav style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0 40px',height:60,backgroundColor:C.deepGreen,position:'sticky',top:0,zIndex:100,boxShadow:'0 2px 8px rgba(0,0,0,0.2)',flexShrink:0}}>
@@ -321,7 +356,12 @@ const Navbar = ({ isLoggedIn, onLogout, cartCount }) => {
         {[['/', 'Home'],['/products','Products'],['/orders','Orders'],['/profile','Profile']].map(([p,label])=>(
           <Link key={p} to={p} className="nav-link" style={{fontWeight:path===p?700:500,color:path===p?'#fff':'rgba(255,255,255,0.85)'}}>{label}</Link>
         ))}
-        <Link to="/cart" className="cart-pill" style={{marginLeft:10}}>
+        {isAdmin && (
+          <Link to="/admin" className="admin-pill" style={{marginLeft:6}}>
+            <AdminIcon/> Admin
+          </Link>
+        )}
+        <Link to="/cart" className="cart-pill" style={{marginLeft:6}}>
           <CartIcon/>
           <span>Cart</span>
           {cartCount > 0 && <span style={{background:'#fff',color:C.deepGreen,borderRadius:'50%',width:18,height:18,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800}}>{cartCount}</span>}
@@ -354,12 +394,7 @@ const HeroBanner = ({ displayName, motto, profileImage, animate }) => (
         <div style={{display:'flex',alignItems:'center',gap:20,marginBottom:24}}>
           <div style={{width:100,height:100,borderRadius:'50%',background:'#fff',display:'grid',placeItems:'center',boxShadow:'0 14px 36px rgba(0,0,0,0.09)'}}>
             {profileImage ? (
-              <img
-                src={profileImage}
-                alt="Profile"
-                style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}
-                onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
-              />
+              <img src={profileImage} alt="Profile" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}} onError={e=>{e.target.onerror=null;e.target.src=IMG_PLACEHOLDER;}}/>
             ) : (
               <span style={{fontSize:32,color:C.deepGreen}}>👋</span>
             )}
@@ -383,7 +418,7 @@ const HeroBanner = ({ displayName, motto, profileImage, animate }) => (
       <div style={{position:'absolute',bottom:-12,left:-10,width:74,height:74,borderRadius:'50%',background:'rgba(200,230,201,0.45)'}}/>
       <div style={{position:'relative',background:'#fff',borderRadius:24,boxShadow:'0 20px 40px rgba(30,77,43,0.08)',padding:26,display:'grid',gap:22}}>
         <div style={{display:'flex',alignItems:'center',gap:14}}>
-          <div style={{width:60,height:60,borderRadius:'50%',background:C.lightGreen,display:'grid',placeItems:'center',fontSize:28,boxShadow:'inset 0 0 0 1px rgba(46,125,69,0.12)'}}>🥑</div>
+          <div style={{width:60,height:60,borderRadius:'50%',background:C.lightGreen,display:'grid',placeItems:'center',fontSize:28}}>🥑</div>
           <div>
             <div style={{fontSize:12,fontWeight:700,color:C.midGreen,textTransform:'uppercase',letterSpacing:0.8}}>Fresh Picks</div>
             <div style={{fontSize:15,fontWeight:700,color:C.textDark,marginTop:4}}>Delivered to you</div>
@@ -392,12 +427,12 @@ const HeroBanner = ({ displayName, motto, profileImage, animate }) => (
         <div style={{display:'grid',gap:14}}>
           {[
             { label: 'Farm-fresh ingredients', value: 'Picked daily' },
-            { label: 'Quick checkout', value: '2 taps only' },
-            { label: 'Better value', value: 'Local prices' },
+            { label: 'Quick checkout',          value: '2 taps only' },
+            { label: 'Better value',            value: 'Local prices' },
           ].map((item, index) => (
             <div key={index} style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,padding:'14px 16px',borderRadius:16,background:'#f7fbf5'}}>
               <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <div style={{width:12,height:12,borderRadius:'50%',background:C.midGreen,flexShrink:0}} />
+                <div style={{width:12,height:12,borderRadius:'50%',background:C.midGreen,flexShrink:0}}/>
                 <div style={{fontSize:13,color:C.textDark,fontWeight:600}}>{item.label}</div>
               </div>
               <div style={{fontSize:12,fontWeight:700,color:C.deepGreen}}>{item.value}</div>
@@ -432,13 +467,7 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
 
   useEffect(() => {
     setHeroVisible(false);
-    const mottoOptions = [
-      'Your grocery list, simplified.',
-      'Fresh market finds delivered fast.',
-      'Local produce picked just for you.',
-      'Shop today, receive fresh tomorrow.',
-      'Healthy groceries made easy.'
-    ];
+    const mottoOptions = ['Your grocery list, simplified.','Fresh market finds delivered fast.','Local produce picked just for you.','Shop today, receive fresh tomorrow.','Healthy groceries made easy.'];
     setHeroMotto(mottoOptions[Math.floor(Math.random() * mottoOptions.length)]);
     const timer = setTimeout(() => setHeroVisible(true), 30);
     return () => clearTimeout(timer);
@@ -453,33 +482,29 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
   }, []);
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/categories/`)
-      .then(r => setCategories(r.data))
-      .catch(() => {});
+    axios.get(`${API_BASE_URL}/api/categories/`).then(r => setCategories(r.data)).catch(()=>{});
   }, []);
 
   useEffect(() => {
     setLoading(true);
-    const url = selectedCategory
-      ? `${API_BASE_URL}/api/products/?category=${selectedCategory}`
-      : `${API_BASE_URL}/api/products/`;
+    const url = selectedCategory ? `${API_BASE_URL}/api/products/?category=${selectedCategory}` : `${API_BASE_URL}/api/products/`;
     axios.get(url)
       .then(r => setProducts(Array.isArray(r.data) ? r.data : []))
       .catch(() => showToast('Could not load products.', 'error'))
       .finally(() => setLoading(false));
   }, [selectedCategory, showToast]);
 
-  const addToCart = async (productId, productName) => {
+  const addToCart = async (productId, productName, qty, unit) => {
     const token = localStorage.getItem('token');
     if (!token) { showToast('Please log in first!', 'info'); navigate('/login'); return; }
     setAddingId(productId);
     try {
       await axios.post(
         `${API_BASE_URL}/api/cart/add/`,
-        { product_id: productId, quantity: 1 },
+        { product_id: productId, quantity: qty },
         { headers: { Authorization: `Token ${token}` } }
       );
-      showToast(`${productName} added! 🛒`, 'success');
+      showToast(`${formatQty(qty, unit)} of ${productName} added! 🛒`, 'success');
       onCartUpdated?.();
     } catch { showToast('Failed to add item.', 'error'); }
     finally { setAddingId(null); }
@@ -495,22 +520,14 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
       <div style={{padding:'32px 40px 0'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
           <h3 style={{fontSize:17,fontWeight:700,color:C.textDark}}>Shop by Category</h3>
-          <Link to="/products" style={{background:'none',border:'none',color:C.midGreen,fontWeight:600,fontSize:13,cursor:'pointer'}}>See all →</Link>
+          <Link to="/products" style={{color:C.midGreen,fontWeight:600,fontSize:13}}>See all →</Link>
         </div>
         <div style={{display:'flex',gap:14,overflowX:'auto',paddingBottom:8}}>
           {categories.map(cat => (
-            <div
-              key={cat.id}
-              onClick={() => setSelectedCategory(selectedCategory===cat.id ? null : cat.id)}
-              style={{minWidth:110,background:'#fff',border:selectedCategory===cat.id?`2px solid ${C.deepGreen}`:`1px solid ${C.border}`,borderRadius:12,padding:'14px 10px',textAlign:'center',cursor:'pointer',flexShrink:0,transition:'border 0.15s'}}
-            >
+            <div key={cat.id} onClick={() => setSelectedCategory(selectedCategory===cat.id ? null : cat.id)}
+              style={{minWidth:110,background:'#fff',border:selectedCategory===cat.id?`2px solid ${C.deepGreen}`:`1px solid ${C.border}`,borderRadius:12,padding:'14px 10px',textAlign:'center',cursor:'pointer',flexShrink:0,transition:'border 0.15s'}}>
               <div style={{height:56,borderRadius:8,marginBottom:10,overflow:'hidden',background:C.paleGreen}}>
-                <img
-                  src={cat.image || IMG_PLACEHOLDER}
-                  alt={cat.name}
-                  style={{width:'100%',height:'100%',objectFit:'cover'}}
-                  onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
-                />
+                <img src={cat.image||IMG_PLACEHOLDER} alt={cat.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.onerror=null;e.target.src=IMG_PLACEHOLDER;}}/>
               </div>
               <span style={{fontSize:13,fontWeight:600,color:C.textDark}}>{cat.name}</span>
             </div>
@@ -522,17 +539,14 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
       <div style={{padding:'28px 40px 48px'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
           <div>
-            <h3 style={{fontSize:17,fontWeight:700,color:C.textDark,marginBottom:4}}>
-              {selectedCategory ? 'Filtered Products' : 'Featured Products'}
-            </h3>
+            <h3 style={{fontSize:17,fontWeight:700,color:C.textDark,marginBottom:4}}>{selectedCategory ? 'Filtered Products' : 'Featured Products'}</h3>
             {!selectedCategory && <p style={{fontSize:13,color:C.textMid}}>Popular picks from our freshest arrivals.</p>}
           </div>
-          <Link to="/products" style={{background:'none',border:'none',color:C.midGreen,fontWeight:600,fontSize:13,cursor:'pointer'}}>See all →</Link>
+          <Link to="/products" style={{color:C.midGreen,fontWeight:600,fontSize:13}}>See all →</Link>
         </div>
-
         {loading ? (
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))',gap:18}}>
-            {[...Array(4)].map((_,i) => <SkeletonCard key={i}/>)}
+            {[...Array(4)].map((_,i)=><SkeletonCard key={i}/>)}
           </div>
         ) : displayProducts.length === 0 ? (
           <div style={{textAlign:'center',padding:'40px',color:C.textMid}}>
@@ -541,9 +555,7 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
           </div>
         ) : (
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))',gap:18}}>
-            {displayProducts.map(p => (
-              <ProductCard key={p.id} p={p} onAddToCart={addToCart} addingId={addingId}/>
-            ))}
+            {displayProducts.map(p=><ProductCard key={p.id} p={p} onAddToCart={addToCart} addingId={addingId}/>)}
           </div>
         )}
       </div>
@@ -552,7 +564,7 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PRODUCTS PAGE  — sidebar + search + grid
+// PRODUCTS PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 const ProductList = ({ showToast, onCartUpdated }) => {
   const [products, setProducts]     = useState([]);
@@ -564,53 +576,36 @@ const ProductList = ({ showToast, onCartUpdated }) => {
   const [priceMax, setPriceMax]     = useState(500);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/categories/`).then(r => setCategories(r.data)).catch(()=>{});
-  }, []);
+  useEffect(() => { axios.get(`${API_BASE_URL}/api/categories/`).then(r=>setCategories(r.data)).catch(()=>{}); }, []);
 
   useEffect(() => {
     setLoading(true);
-    const url = selectedCategory
-      ? `${API_BASE_URL}/api/products/?category=${selectedCategory}`
-      : `${API_BASE_URL}/api/products/`;
-    axios.get(url)
-      .then(r => setProducts(Array.isArray(r.data) ? r.data : []))
-      .catch(() => showToast('Could not load products.', 'error'))
-      .finally(() => setLoading(false));
+    const url = selectedCategory ? `${API_BASE_URL}/api/products/?category=${selectedCategory}` : `${API_BASE_URL}/api/products/`;
+    axios.get(url).then(r=>setProducts(Array.isArray(r.data)?r.data:[])).catch(()=>showToast('Could not load products.','error')).finally(()=>setLoading(false));
   }, [selectedCategory, showToast]);
 
-  const addToCart = async (productId, productName) => {
+  const addToCart = async (productId, productName, qty, unit) => {
     const token = localStorage.getItem('token');
     if (!token) { showToast('Please log in first!', 'info'); navigate('/login'); return; }
     setAddingId(productId);
     try {
-      await axios.post(
-        `${API_BASE_URL}/api/cart/add/`,
-        { product_id: productId, quantity: 1 },
-        { headers: { Authorization: `Token ${token}` } }
-      );
-      showToast(`${productName} added! 🛒`, 'success');
+      await axios.post(`${API_BASE_URL}/api/cart/add/`, { product_id: productId, quantity: qty }, { headers: { Authorization: `Token ${token}` } });
+      showToast(`${formatQty(qty, unit)} of ${productName} added! 🛒`, 'success');
       onCartUpdated?.();
     } catch { showToast('Failed to add item.', 'error'); }
     finally { setAddingId(null); }
   };
 
-  const filtered = products.filter(p =>
-    (!search || p.name.toLowerCase().includes(search.toLowerCase())) &&
-    parseFloat(p.price) <= priceMax
-  );
-
-  const allCats = [{ id: null, name: 'All Products' }, ...categories];
+  const filtered = products.filter(p => (!search || p.name.toLowerCase().includes(search.toLowerCase())) && parseFloat(p.price) <= priceMax);
+  const allCats  = [{ id: null, name: 'All Products' }, ...categories];
 
   return (
     <div className="products-layout" style={{display:'flex',flex:1,minHeight:0,overflow:'hidden'}}>
       <aside className="sidebar" style={{width:200,flexShrink:0,background:C.cream,borderRight:`1px solid ${C.border}`,padding:'24px 14px',overflowY:'auto',display:'flex',flexDirection:'column'}}>
         <div style={{marginBottom:32}}>
           <div style={{fontSize:13,fontWeight:700,color:C.textDark,marginBottom:10,paddingLeft:4}}>Categories</div>
-          {allCats.map(cat => (
-            <button key={cat.id??'all'} className={`sidebar-btn${selectedCategory===cat.id?' active':''}`} onClick={()=>setSelectedCategory(cat.id)}>
-              {cat.name}
-            </button>
+          {allCats.map(cat=>(
+            <button key={cat.id??'all'} className={`sidebar-btn${selectedCategory===cat.id?' active':''}`} onClick={()=>setSelectedCategory(cat.id)}>{cat.name}</button>
           ))}
         </div>
         <div>
@@ -619,11 +614,10 @@ const ProductList = ({ showToast, onCartUpdated }) => {
           <div style={{fontSize:12,color:C.textMid,paddingLeft:2,fontWeight:500}}>₱0 – ₱{priceMax}</div>
         </div>
       </aside>
-
       <div style={{flex:1,padding:'24px 28px',overflowY:'auto',display:'flex',flexDirection:'column'}}>
         <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:22}}>
           <div style={{flex:1,position:'relative'}}>
-            <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:C.textLight,pointerEvents:'none',display:'flex'}}><SearchIcon/></span>
+            <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:C.textLight,display:'flex'}}><SearchIcon/></span>
             <input type="text" placeholder="Search products or brands…" value={search} onChange={e=>setSearch(e.target.value)}
               style={{width:'100%',padding:'10px 14px 10px 36px',borderRadius:10,border:`1px solid ${C.border}`,fontSize:14,background:'#fff',color:C.textDark}}/>
           </div>
@@ -631,18 +625,15 @@ const ProductList = ({ showToast, onCartUpdated }) => {
             Sort by: <span style={{fontWeight:700,color:C.textDark}}>Latest</span>
           </div>
         </div>
-
         {loading ? (
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(175px,1fr))',gap:18}}>
-            {[...Array(8)].map((_,i) => <SkeletonCard key={i}/>)}
+            {[...Array(8)].map((_,i)=><SkeletonCard key={i}/>)}
           </div>
         ) : filtered.length === 0 ? (
           <div style={{textAlign:'center',padding:'60px 0',color:C.textMid}}>No products found.</div>
         ) : (
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(175px,1fr))',gap:18}}>
-            {filtered.map(p => (
-              <ProductCard key={p.id} p={p} onAddToCart={addToCart} addingId={addingId}/>
-            ))}
+            {filtered.map(p=><ProductCard key={p.id} p={p} onAddToCart={addToCart} addingId={addingId}/>)}
           </div>
         )}
       </div>
@@ -666,7 +657,10 @@ const Login = ({ onLoginSuccess, showToast }) => {
     try {
       const res = await axios.post(`${API_BASE_URL}/api-token-auth/`, { username: identifier, password });
       localStorage.setItem('token', res.data.token);
-      onLoginSuccess(identifier);
+      // Fetch profile to get is_staff
+      const profile = await axios.get(`${API_BASE_URL}/api/profile/`, { headers: { Authorization: `Token ${res.data.token}` } });
+      localStorage.setItem('isAdmin', profile.data.is_staff ? 'true' : 'false');
+      onLoginSuccess(identifier, profile.data.is_staff);
       showToast(`Welcome back! 👋`, 'success');
       navigate('/');
     } catch { showToast('Login failed. Please check your credentials.', 'error'); }
@@ -733,7 +727,8 @@ const Register = ({ showToast }) => {
     if (password !== confirmPassword) { showToast('Passwords do not match.', 'error'); return; }
     setLoading(true);
     try {
-      await axios.post(`${API_BASE_URL}/api/register/`, { username, email, password });
+      // Send all fields to backend
+      await axios.post(`${API_BASE_URL}/api/register/`, { username, email, password, first_name: firstName, last_name: lastName, phone });
       showToast('Account created! Sign in now.', 'success');
       navigate('/login');
     } catch { showToast('Registration failed.', 'error'); }
@@ -791,18 +786,14 @@ const Cart = ({ showToast, onCartUpdated }) => {
         const qmap = {};
         items.forEach(i => { qmap[i.id] = i.quantity || 1; });
         setQuantities(qmap);
-      })
-      .finally(() => setLoading(false));
+      }).finally(() => setLoading(false));
   }, [token]);
 
   useEffect(() => { fetchCart(); }, [fetchCart]);
 
   const removeItem = async (cartId) => {
     try {
-      await axios.delete(
-        `${API_BASE_URL}/api/cart/remove/${cartId}/`,
-        { headers: { Authorization: `Token ${token}` } }
-      );
+      await axios.delete(`${API_BASE_URL}/api/cart/remove/${cartId}/`, { headers: { Authorization: `Token ${token}` } });
       showToast('Item removed', 'info');
       fetchCart();
       onCartUpdated?.();
@@ -810,23 +801,16 @@ const Cart = ({ showToast, onCartUpdated }) => {
   };
 
   const changeQty = (id, delta) => {
-    setQuantities(prev => {
-      const newQty = Math.max(1, (prev[id] || 1) + delta);
-      return { ...prev, [id]: newQty };
-    });
+    setQuantities(prev => ({ ...prev, [id]: Math.max(1, (prev[id] || 1) + delta) }));
   };
 
   if (!token) return (
     <div style={{flex:1,display:'flex',justifyContent:'center',alignItems:'center',padding:'80px 40px',background:C.cream}}>
       <div style={{maxWidth:520,textAlign:'center',padding:30,background:'#fff',borderRadius:18,boxShadow:'0 16px 34px rgba(0,0,0,0.08)'}}>
-        <div style={{marginBottom:18}}>
-          <div style={{fontSize:22,fontWeight:800,color:C.textDark,marginBottom:10}}>Your cart is waiting</div>
-          <p style={{fontSize:15,color:C.textMid,lineHeight:1.7}}>
-            Save your favorites and checkout faster by signing in. Existing users can log in, and new customers can create an account in seconds.
-          </p>
-        </div>
-        <div style={{display:'flex',justifyContent:'center',gap:12,flexWrap:'wrap'}}>
-          <Link to="/login" style={{background:C.deepGreen,color:'#fff',padding:'12px 28px',borderRadius:10,fontWeight:700,fontSize:14}}>Log In</Link>
+        <div style={{fontSize:22,fontWeight:800,color:C.textDark,marginBottom:10}}>Your cart is waiting</div>
+        <p style={{fontSize:15,color:C.textMid,lineHeight:1.7,marginBottom:18}}>Sign in to see your cart and checkout faster.</p>
+        <div style={{display:'flex',justifyContent:'center',gap:12}}>
+          <Link to="/login"    style={{background:C.deepGreen,color:'#fff',padding:'12px 28px',borderRadius:10,fontWeight:700,fontSize:14}}>Log In</Link>
           <Link to="/register" style={{background:'#e8f5e9',color:C.deepGreen,padding:'12px 28px',borderRadius:10,fontWeight:700,fontSize:14}}>Register</Link>
         </div>
       </div>
@@ -838,11 +822,8 @@ const Cart = ({ showToast, onCartUpdated }) => {
   return (
     <div style={{flex:1,padding:'32px 40px 48px',background:C.cream,overflowY:'auto'}}>
       <h2 style={{fontSize:22,fontWeight:800,color:C.textDark,marginBottom:22}}>My Shopping Cart</h2>
-
       {loading ? <Spinner/> : (
         <div className="cart-grid" style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:24,alignItems:'start'}}>
-
-          {/* Left: cart table */}
           <div>
             <div style={{background:'#fff',borderRadius:12,overflow:'hidden',border:`1px solid ${C.border}`}}>
               <div style={{display:'grid',gridTemplateColumns:'2.5fr 1fr 1.4fr 1fr 36px',background:C.deepGreen,padding:'12px 18px',gap:8}}>
@@ -850,7 +831,6 @@ const Cart = ({ showToast, onCartUpdated }) => {
                   <div key={i} style={{fontSize:13,fontWeight:700,color:'#fff'}}>{h}</div>
                 ))}
               </div>
-
               {cartItems.length === 0 ? (
                 <div style={{padding:'48px',textAlign:'center',color:C.textMid}}>
                   <p style={{marginBottom:16,fontWeight:500}}>Your cart is empty.</p>
@@ -858,19 +838,18 @@ const Cart = ({ showToast, onCartUpdated }) => {
                 </div>
               ) : cartItems.map(item => {
                 const qty = quantities[item.id] || 1;
+                const unit = item.product_unit || 'pcs';
                 const lineTotal = (parseFloat(item.product_price||0) * qty).toFixed(0);
                 return (
                   <div key={item.id} style={{display:'grid',gridTemplateColumns:'2.5fr 1fr 1.4fr 1fr 36px',padding:'14px 18px',gap:8,alignItems:'center',borderBottom:`1px solid ${C.border}`}}>
                     <div style={{display:'flex',alignItems:'center',gap:11}}>
                       <div style={{width:42,height:42,borderRadius:8,background:C.paleGreen,flexShrink:0,overflow:'hidden'}}>
-                        <img
-                          src={item.product_image || IMG_PLACEHOLDER}
-                          alt={item.product_name}
-                          style={{width:'100%',height:'100%',objectFit:'cover'}}
-                          onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
-                        />
+                        <img src={item.product_image||IMG_PLACEHOLDER} alt={item.product_name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.onerror=null;e.target.src=IMG_PLACEHOLDER;}}/>
                       </div>
-                      <span style={{fontSize:14,fontWeight:600,color:C.textDark,lineHeight:1.35}}>{item.product_name}</span>
+                      <div>
+                        <span style={{fontSize:14,fontWeight:600,color:C.textDark}}>{item.product_name}</span>
+                        <div style={{fontSize:11,color:C.textLight}}>per {unit}</div>
+                      </div>
                     </div>
                     <div style={{fontSize:14,color:C.textMid,fontWeight:500}}>₱{item.product_price}</div>
                     <div style={{display:'flex',alignItems:'center',gap:6}}>
@@ -879,22 +858,17 @@ const Cart = ({ showToast, onCartUpdated }) => {
                       <button className="qty-btn" onClick={()=>changeQty(item.id,1)}>+</button>
                     </div>
                     <div style={{fontSize:14,fontWeight:700,color:C.deepGreen}}>₱{lineTotal}</div>
-                    <button className="remove-btn" onClick={()=>removeItem(item.id)} title="Remove item">
-                      <XIcon/>
-                    </button>
+                    <button className="remove-btn" onClick={()=>removeItem(item.id)}><XIcon/></button>
                   </div>
                 );
               })}
             </div>
-
             <div style={{display:'flex',gap:12,marginTop:14}}>
               <input type="text" placeholder="Enter coupon code" value={coupon} onChange={e=>setCoupon(e.target.value)}
                 style={{flex:1,padding:'10px 16px',borderRadius:9,border:`1px solid ${C.border}`,fontSize:14,background:'#fff',color:C.textDark}}/>
               <button className="apply-btn">Apply</button>
             </div>
           </div>
-
-          {/* Right: Order Summary */}
           <div style={{background:'#fff',borderRadius:12,border:`1px solid ${C.border}`,padding:'22px 20px'}}>
             <h3 style={{fontSize:16,fontWeight:800,color:C.textDark,marginBottom:18}}>Order Summary</h3>
             <div style={{display:'flex',flexDirection:'column',gap:13,marginBottom:18}}>
@@ -903,12 +877,10 @@ const Cart = ({ showToast, onCartUpdated }) => {
                 <span style={{fontWeight:600,color:C.textDark}}>₱{subtotal.toFixed(0)}</span>
               </div>
               <div style={{display:'flex',justifyContent:'space-between',fontSize:14,color:C.textMid}}>
-                <span>Delivery Fee</span>
-                <span style={{fontWeight:600,color:C.midGreen}}>Free</span>
+                <span>Delivery Fee</span><span style={{fontWeight:600,color:C.midGreen}}>Free</span>
               </div>
               <div style={{display:'flex',justifyContent:'space-between',fontSize:14,color:C.textMid}}>
-                <span>Discount</span>
-                <span style={{fontWeight:600,color:C.textDark}}>—₱0</span>
+                <span>Discount</span><span style={{fontWeight:600,color:C.textDark}}>—₱0</span>
               </div>
               <div style={{borderTop:`1.5px solid ${C.border}`,paddingTop:13,display:'flex',justifyContent:'space-between'}}>
                 <span style={{fontSize:16,fontWeight:800,color:C.textDark}}>Total</span>
@@ -949,18 +921,14 @@ const Checkout = ({ showToast, onCartUpdated }) => {
   useEffect(() => {
     if (!token) { navigate('/login'); return; }
     axios.get(`${API_BASE_URL}/api/cart/`, { headers: { Authorization: `Token ${token}` } })
-      .then(res => setCartItems(res.data))
-      .finally(() => setLoading(false));
+      .then(res => setCartItems(res.data)).finally(() => setLoading(false));
   }, [token, navigate]);
 
   const subtotal = cartItems.reduce((s,i) => s + parseFloat(i.product_price||0) * (i.quantity||1), 0);
 
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
-    if (!firstName || !lastName || !address || !city || !contact) {
-      showToast('Please fill in all required fields.', 'error');
-      return;
-    }
+    if (!firstName || !lastName || !address || !city || !contact) { showToast('Please fill in all required fields.', 'error'); return; }
     setPlacing(true);
     try {
       await axios.post(
@@ -971,11 +939,8 @@ const Checkout = ({ showToast, onCartUpdated }) => {
       showToast('Order placed successfully! 🎉', 'success');
       onCartUpdated?.();
       navigate('/orders');
-    } catch {
-      showToast('Failed to place order. Please try again.', 'error');
-    } finally {
-      setPlacing(false);
-    }
+    } catch { showToast('Failed to place order. Please try again.', 'error'); }
+    finally { setPlacing(false); }
   };
 
   const lbl = { display:'block', fontSize:13, fontWeight:600, color:C.textDark, marginBottom:7 };
@@ -984,67 +949,44 @@ const Checkout = ({ showToast, onCartUpdated }) => {
   return (
     <div style={{flex:1,padding:'32px 40px 48px',background:C.cream,overflowY:'auto'}}>
       <h2 style={{fontSize:22,fontWeight:800,color:C.textDark,marginBottom:22}}>Checkout</h2>
-
       {loading ? <Spinner/> : (
         <form onSubmit={handlePlaceOrder}>
           <div className="checkout-grid" style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:24,alignItems:'start'}}>
-
             <div>
               <div style={sectionBox}>
                 <h3 style={{fontSize:15,fontWeight:700,color:C.textDark,marginBottom:18,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>1. Delivery Information</h3>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14}}>
-                  <div>
-                    <label style={lbl}>First Name</label>
-                    <input className="form-input" type="text" placeholder="Juan" value={firstName} onChange={e=>setFirstName(e.target.value)} required/>
-                  </div>
-                  <div>
-                    <label style={lbl}>Last Name</label>
-                    <input className="form-input" type="text" placeholder="Dela Cruz" value={lastName} onChange={e=>setLastName(e.target.value)} required/>
-                  </div>
+                  <div><label style={lbl}>First Name</label><input className="form-input" type="text" placeholder="Juan" value={firstName} onChange={e=>setFirstName(e.target.value)} required/></div>
+                  <div><label style={lbl}>Last Name</label><input className="form-input" type="text" placeholder="Dela Cruz" value={lastName} onChange={e=>setLastName(e.target.value)} required/></div>
                 </div>
                 <div style={{marginBottom:14}}>
                   <label style={lbl}>Delivery Address</label>
                   <input className="form-input" type="text" placeholder="Purok 5, Brgy. Bulua, CDO City" value={address} onChange={e=>setAddress(e.target.value)} required/>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14}}>
-                  <div>
-                    <label style={lbl}>City</label>
-                    <input className="form-input" type="text" placeholder="Cagayan de Oro" value={city} onChange={e=>setCity(e.target.value)} required/>
-                  </div>
-                  <div>
-                    <label style={lbl}>Contact Number</label>
-                    <input className="form-input" type="text" placeholder="09XX XXX XXXX" value={contact} onChange={e=>setContact(e.target.value)} required/>
-                  </div>
+                  <div><label style={lbl}>City</label><input className="form-input" type="text" placeholder="Cagayan de Oro" value={city} onChange={e=>setCity(e.target.value)} required/></div>
+                  <div><label style={lbl}>Contact Number</label><input className="form-input" type="text" placeholder="09XX XXX XXXX" value={contact} onChange={e=>setContact(e.target.value)} required/></div>
                 </div>
                 <div>
                   <label style={lbl}>Order Notes <span style={{fontWeight:400,color:C.textLight}}>(optional)</span></label>
                   <textarea className="form-input" placeholder="Leave a note for the vendor…" value={notes} onChange={e=>setNotes(e.target.value)} rows={3} style={{resize:'vertical',minHeight:72}}/>
                 </div>
               </div>
-
               <div style={sectionBox}>
                 <h3 style={{fontSize:15,fontWeight:700,color:C.textDark,marginBottom:16,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>2. Payment Method</h3>
                 <div style={{display:'flex',gap:12,marginBottom:14}}>
-                  <button type="button" className={`pay-method-btn${payMethod==='cod'?' selected':''}`} onClick={()=>setPayMethod('cod')}>
-                    <CodIcon/> Cash on Delivery
-                  </button>
-                  <button type="button" className={`pay-method-btn${payMethod==='paylater'?' selected':''}`} onClick={()=>setPayMethod('paylater')}>
-                    <PayLaterIcon/> Pay Later
-                  </button>
+                  <button type="button" className={`pay-method-btn${payMethod==='cod'?' selected':''}`} onClick={()=>setPayMethod('cod')}><CodIcon/> Cash on Delivery</button>
+                  <button type="button" className={`pay-method-btn${payMethod==='paylater'?' selected':''}`} onClick={()=>setPayMethod('paylater')}><PayLaterIcon/> Pay Later</button>
                 </div>
-                <p style={{fontSize:12,color:C.textLight,lineHeight:1.5}}>
-                  Note: Online payment integration (GCash, PayPal) is not yet supported.
-                </p>
+                <p style={{fontSize:12,color:C.textLight,lineHeight:1.5}}>Note: Online payment integration (GCash, PayPal) is not yet supported.</p>
               </div>
             </div>
-
-            {/* Right: Order Summary */}
             <div style={{background:'#fff',borderRadius:12,border:`1px solid ${C.border}`,padding:'22px 20px',position:'sticky',top:20}}>
               <h3 style={{fontSize:16,fontWeight:800,color:C.textDark,marginBottom:18}}>Order Summary</h3>
               <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
-                {cartItems.map(item => (
+                {cartItems.map(item=>(
                   <div key={item.id} style={{display:'flex',justifyContent:'space-between',fontSize:13,color:C.textMid}}>
-                    <span style={{fontWeight:500}}>{item.product_name}{(item.quantity||1)>1?` x${item.quantity||1}`:''}</span>
+                    <span style={{fontWeight:500}}>{item.product_name}{(item.quantity||1)>1?` ×${item.quantity||1}`:''} <span style={{color:C.textLight,fontWeight:400}}>({item.product_unit||'pcs'})</span></span>
                     <span style={{fontWeight:600,color:C.textDark}}>₱{(parseFloat(item.product_price||0)*(item.quantity||1)).toFixed(0)}</span>
                   </div>
                 ))}
@@ -1077,6 +1019,7 @@ const Checkout = ({ showToast, onCartUpdated }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
+  const [isAdmin, setIsAdmin]       = useState(localStorage.getItem('isAdmin') === 'true');
   const [displayName, setDisplayName] = useState(localStorage.getItem('displayName') || '');
   const [cartCount, setCartCount]   = useState(0);
   const [toasts, setToasts]         = useState([]);
@@ -1091,33 +1034,36 @@ export default function App() {
   const loadCartCount = useCallback(async () => {
     if (!token) { setCartCount(0); return; }
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/cart/`,
-        { headers: { Authorization: `Token ${token}` } }
-      );
-      const count = res.data.reduce((sum, item) => sum + (item.quantity || 1), 0);
-      setCartCount(count);
+      const res = await axios.get(`${API_BASE_URL}/api/cart/`, { headers: { Authorization: `Token ${token}` } });
+      setCartCount(res.data.reduce((sum, item) => sum + (item.quantity || 1), 0));
     } catch { setCartCount(0); }
   }, [token]);
 
   useEffect(() => { loadCartCount(); }, [loadCartCount]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (!token) return;
     axios.get(`${API_BASE_URL}/api/profile/`, { headers: { Authorization: `Token ${token}` } })
       .then(res => {
         const name = res.data.first_name || res.data.username || '';
         setDisplayName(name);
+        setIsAdmin(!!res.data.is_staff);
         localStorage.setItem('displayName', name);
-      })
-      .catch(() => {});
+        localStorage.setItem('isAdmin', res.data.is_staff ? 'true' : 'false');
+      }).catch(() => {});
   }, [token]);
+
+  const handleLoginSuccess = (identifier, isStaff) => {
+    setIsLoggedIn(true);
+    setIsAdmin(!!isStaff);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('displayName');
+    localStorage.removeItem('isAdmin');
     setIsLoggedIn(false);
+    setIsAdmin(false);
     setDisplayName('');
     setCartCount(0);
     showToast('Logged out', 'info');
@@ -1128,17 +1074,25 @@ export default function App() {
     <Router>
       <GlobalStyles/>
       <div style={{display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden',background:C.cream}}>
-        <Navbar isLoggedIn={isLoggedIn} onLogout={handleLogout} cartCount={cartCount}/>
+        <Navbar isLoggedIn={isLoggedIn} isAdmin={isAdmin} onLogout={handleLogout} cartCount={cartCount}/>
         <div style={{display:'flex',flex:1,flexDirection:'column',overflow:'hidden'}}>
           <Routes>
-            <Route path="/"         element={<HomePage    showToast={showToast} onCartUpdated={loadCartCount} displayName={displayName}/>}/>
-            <Route path="/products" element={<ProductList showToast={showToast} onCartUpdated={loadCartCount}/>}/>
-            <Route path="/login"    element={<Login       onLoginSuccess={()=>{ setIsLoggedIn(true); }} showToast={showToast}/>}/>
-            <Route path="/register" element={<Register    showToast={showToast}/>}/>
-            <Route path="/cart"     element={<Cart        showToast={showToast} onCartUpdated={loadCartCount}/>}/>
-            <Route path="/checkout" element={<Checkout    showToast={showToast} onCartUpdated={loadCartCount}/>}/>
-            <Route path="/orders"   element={<OrdersPage  showToast={showToast} onCartUpdated={loadCartCount}/>}/>
-            <Route path="/profile"  element={<ProfilePage showToast={showToast} onProfileUpdated={(name) => { setDisplayName(name); localStorage.setItem('displayName', name); }} />}/>
+            <Route path="/"         element={<HomePage      showToast={showToast} onCartUpdated={loadCartCount} displayName={displayName}/>}/>
+            <Route path="/products" element={<ProductList   showToast={showToast} onCartUpdated={loadCartCount}/>}/>
+            <Route path="/login"    element={<Login         onLoginSuccess={handleLoginSuccess} showToast={showToast}/>}/>
+            <Route path="/register" element={<Register      showToast={showToast}/>}/>
+            <Route path="/cart"     element={<Cart          showToast={showToast} onCartUpdated={loadCartCount}/>}/>
+            <Route path="/checkout" element={<Checkout      showToast={showToast} onCartUpdated={loadCartCount}/>}/>
+            <Route path="/orders"   element={<OrdersPage    showToast={showToast} onCartUpdated={loadCartCount}/>}/>
+            <Route path="/profile"  element={<ProfilePage   showToast={showToast} onProfileUpdated={(name) => { setDisplayName(name); localStorage.setItem('displayName', name); }}/>}/>
+            <Route path="/admin"    element={<AdminDashboard showToast={showToast}/>}/>
+            <Route path="*"         element={
+              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:C.cream,gap:12}}>
+                <div style={{fontSize:72,fontWeight:900,color:C.lightGreen}}>404</div>
+                <div style={{fontSize:20,fontWeight:700,color:C.textDark}}>Page not found</div>
+                <a href="/" style={{marginTop:8,background:C.deepGreen,color:'#fff',padding:'10px 28px',borderRadius:10,fontWeight:700,fontSize:14}}>Go Home</a>
+              </div>
+            }/>
           </Routes>
         </div>
         <Footer/>
