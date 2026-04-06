@@ -12,7 +12,6 @@ from rest_framework.authtoken.models import Token
 from .models import Product, Cart, Category, Order, OrderItem, UserProfile
 from .serializers import ProductSerializer, CartSerializer, CategorySerializer, OrderSerializer
 
-
 class CustomAuthToken(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data,

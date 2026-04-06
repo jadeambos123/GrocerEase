@@ -4,7 +4,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
 from django.views.static import serve
-from grocery import views as grocery_views 
+from grocery import views as grocery_views
+from .views import CustomAuthToken
 
 def home(request):
     return JsonResponse({
