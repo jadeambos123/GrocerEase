@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-
-const API_BASE_URL = "https://grocerease-3.onrender.com";
+import { API_BASE_URL } from '../api';
 
 const C = {
   deepGreen:  '#1e4d2b',
