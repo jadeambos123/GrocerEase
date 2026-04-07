@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://grocerease-3.onrender.com';
+
 const API = axios.create({
-    baseURL: 'http://127.0.0.1:8000/api/', // Your Django URL
+    baseURL: `${API_BASE_URL}/api/`,
 });
 
 export const fetchProducts = () => API.get('products/');
