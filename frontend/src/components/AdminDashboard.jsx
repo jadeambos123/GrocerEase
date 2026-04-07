@@ -358,7 +358,6 @@ const ProductsTab = ({ showToast }) => {
         payload.append('unit', form.unit);
         payload.append('description', form.description);
         payload.append('image', imageFile);
-        config.headers['Content-Type'] = 'multipart/form-data';
       } else {
         payload = { ...form, price: parseFloat(form.price), stock: parseInt(form.stock) || 0 };
       }
