@@ -823,26 +823,6 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
   }, []);
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/categories/`).then(r => setCategories(r.data)).catch(()=>{});
-  }, []);
-
-  useEffect(() => {
-    setHeroVisible(false);
-    const mottoOptions = ['Your grocery list, simplified.','Fresh market finds delivered fast.','Local produce picked just for you.','Shop today, receive fresh tomorrow.','Healthy groceries made easy.'];
-    setHeroMotto(mottoOptions[Math.floor(Math.random() * mottoOptions.length)]);
-    const timer = setTimeout(() => setHeroVisible(true), 30);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    axios.get(`${API_BASE_URL}/api/profile/`, { headers: { Authorization: `Token ${token}` } })
-      .then(res => setProfileImage(res.data.profile_image || null))
-      .catch(() => setProfileImage(null));
-  }, []);
-
-  useEffect(() => {
     axios.get(`${API_BASE_URL}/api/categories/`)
       .then(r => {
         const data = r.data;
