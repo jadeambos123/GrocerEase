@@ -287,10 +287,10 @@ const IMG_PLACEHOLDER = 'https://placehold.co/400x400?text=No+Image';
 // ─────────────────────────────────────────────────────────────────────────────
 // STOCK BADGE
 // ─────────────────────────────────────────────────────────────────────────────
-const StockBadge = ({ stock }) => {
+const StockBadge = ({ stock, unit }) => {
   const base = { position:'absolute', top:8, right:8, fontSize:11, fontWeight:600, padding:'3px 9px', borderRadius:20, letterSpacing:'0.01em' };
   if (stock === 0) return <div style={{...base, background:'#FCEBEB', color:'#791F1F'}}>Out of stock</div>;
-  if (stock <= 5)  return <div style={{...base, background:'#FAEEDA', color:'#633806'}}>Only {stock} left</div>;
+  if (stock <= 5)  return <div style={{...base, background:'#FAEEDA', color:'#633806'}}>Only {formatQty(stock, unit)} left</div>;
   return <div style={{...base, background:'#EAF3DE', color:'#27500A'}}>In stock</div>;
 };
 
@@ -298,10 +298,12 @@ const StockBadge = ({ stock }) => {
 // PRODUCT CARD — with unit dropdown
 // ─────────────────────────────────────────────────────────────────────────────
 const ProductCard = ({ p, onAddToCart, addingId }) => {
-  const outOfStock = p.stock === 0;
+  const stock = Number(p.stock) || 0;
   const unit       = getProductUnit(p);
   const presets    = UNIT_PRESETS[unit] || UNIT_PRESETS.pcs;
   const [selectedQty, setSelectedQty] = useState(presets[0]);
+  const outOfStock = stock === 0;
+  const exceedsStock = selectedQty > stock;
 
   return (
     <div className="prod-card" style={{ opacity: outOfStock ? 0.6 : 1 }}>
@@ -312,7 +314,7 @@ const ProductCard = ({ p, onAddToCart, addingId }) => {
           style={{ width:'100%', height:'100%', objectFit:'cover', filter: outOfStock ? 'grayscale(60%)' : 'none' }}
           onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
         />
-        <StockBadge stock={p.stock} />
+        <StockBadge stock={stock} unit={unit} />
       </div>
       <div style={{ padding:'12px 14px 14px' }}>
         {p.category_name && (
@@ -325,21 +327,28 @@ const ProductCard = ({ p, onAddToCart, addingId }) => {
         </div>
 
         {!outOfStock && (
-          <select
-            className="unit-select"
-            value={selectedQty}
-            onChange={e => setSelectedQty(Number(e.target.value))}
-          >
-            {presets.map(qty => (
-              <option key={qty} value={qty}>{formatQty(qty, unit)}</option>
-            ))}
-          </select>
+          <>
+            <select
+              className="unit-select"
+              value={selectedQty}
+              onChange={e => setSelectedQty(Number(e.target.value))}
+            >
+              {presets.map(qty => (
+                <option key={qty} value={qty}>{formatQty(qty, unit)}</option>
+              ))}
+            </select>
+            {exceedsStock && (
+              <div style={{ color: C.red, fontSize:12, marginBottom:10 }}>
+                Only {formatQty(stock, unit)} available. Please choose a smaller amount.
+              </div>
+            )}
+          </>
         )}
 
         <button
           className="atc-btn"
           onClick={() => onAddToCart(p.id, p.name, selectedQty, unit)}
-          disabled={outOfStock || addingId === p.id}
+          disabled={outOfStock || addingId === p.id || exceedsStock}
           style={{ background: outOfStock ? '#9e9e9e' : undefined }}
         >
           {outOfStock ? 'Out of Stock' : addingId === p.id ? 'Adding…' : 'Add to Cart'}
