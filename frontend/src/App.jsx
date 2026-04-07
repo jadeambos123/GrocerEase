@@ -5,11 +5,7 @@ import OrdersPage from './components/Orders';
 import ProfilePage from './components/Profile';
 import AdminDashboard from './components/AdminDashboard';
 import LoginPage from './components/login';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// API BASE URL
-// ─────────────────────────────────────────────────────────────────────────────
-const API_BASE_URL = "https://grocerease-3.onrender.com";
+import { API_BASE_URL } from './api';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UNIT HELPERS
