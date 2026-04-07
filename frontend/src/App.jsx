@@ -745,6 +745,7 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
 
   useEffect(() => {
     axios.get(`${API_BASE_URL}/api/categories/`).then(r => setCategories(r.data)).catch(()=>{});
+  }, []);
 
   useEffect(() => {
     setHeroVisible(false);
