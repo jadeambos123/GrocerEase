@@ -281,19 +281,249 @@ const SkeletonCard = () => (
 const IMG_PLACEHOLDER = 'https://placehold.co/400x400?text=No+Image';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STOCK BADGE
+// STOCK BADGE COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 const StockBadge = ({ stock, unit }) => {
-  const base = { position:'absolute', top:8, right:8, fontSize:11, fontWeight:600, padding:'3px 9px', borderRadius:20, letterSpacing:'0.01em' };
-  if (stock === 0) return <div style={{...base, background:'#FCEBEB', color:'#791F1F'}}>Out of stock</div>;
-  if (stock <= 5)  return <div style={{...base, background:'#FAEEDA', color:'#633806'}}>Only {formatQty(stock, unit)} left</div>;
-  return <div style={{...base, background:'#EAF3DE', color:'#27500A'}}>In stock</div>;
+  const stockNum = Number(stock) || 0;
+  if (stockNum === 0) {
+    return (
+      <div style={{
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: '#ff4444',
+        color: '#fff',
+        padding: '4px 8px',
+        borderRadius: 12,
+        fontSize: 10,
+        fontWeight: 600
+      }}>
+        Out of Stock
+      </div>
+    );
+  }
+  if (stockNum <= 5) {
+    return (
+      <div style={{
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: '#ff8800',
+        color: '#fff',
+        padding: '4px 8px',
+        borderRadius: 12,
+        fontSize: 10,
+        fontWeight: 600
+      }}>
+        Low Stock
+      </div>
+    );
+  }
+  return null;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRODUCT DETAIL MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+const ProductDetailModal = ({ product, isOpen, onClose, onAddToCart, addingId }) => {
+  if (!isOpen || !product) return null;
+
+  const stock = Number(product.stock) || 0;
+  const unit = getProductUnit(product);
+  const presets = UNIT_PRESETS[unit] || UNIT_PRESETS.pcs;
+  const [selectedQty, setSelectedQty] = useState(presets[0]);
+  const outOfStock = stock === 0;
+  const exceedsStock = selectedQty > stock;
+
+  const handleAddToCart = () => {
+    onAddToCart(product.id, product.name, selectedQty, unit);
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: 20
+    }} onClick={onClose}>
+      <div style={{
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        maxWidth: 500,
+        width: '100%',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        position: 'relative'
+      }} onClick={e => e.stopPropagation()}>
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            background: 'none',
+            border: 'none',
+            fontSize: 24,
+            cursor: 'pointer',
+            color: C.textMid,
+            zIndex: 1
+          }}
+        >
+          ×
+        </button>
+
+        <div style={{ height: 300, overflow: 'hidden', position: 'relative' }}>
+          <img
+            src={product.image || IMG_PLACEHOLDER}
+            alt={product.name}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              filter: outOfStock ? 'grayscale(60%)' : 'none'
+            }}
+            onError={e => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}
+          />
+          <StockBadge stock={stock} unit={unit} />
+        </div>
+
+        <div style={{ padding: 24 }}>
+          {product.category_name && (
+            <div style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: C.tagColor,
+              marginBottom: 8,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              {product.category_name}
+            </div>
+          )}
+
+          <h2 style={{
+            fontSize: 24,
+            fontWeight: 800,
+            color: C.textDark,
+            marginBottom: 8
+          }}>
+            {product.name}
+          </h2>
+
+          <div style={{
+            fontSize: 18,
+            fontWeight: 700,
+            color: C.deepGreen,
+            marginBottom: 16
+          }}>
+            ₱{product.price}
+            <span style={{
+              fontSize: 14,
+              fontWeight: 500,
+              color: C.textLight,
+              marginLeft: 4
+            }}>
+              / {unit}
+            </span>
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <h3 style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: C.textDark,
+              marginBottom: 8
+            }}>
+              Description
+            </h3>
+            <p style={{
+              fontSize: 14,
+              color: C.textMid,
+              lineHeight: 1.6,
+              margin: 0
+            }}>
+              {product.description || 'No description available for this product.'}
+            </p>
+          </div>
+
+          {!outOfStock && (
+            <div style={{ marginBottom: 24 }}>
+              <label style={{
+                display: 'block',
+                fontSize: 14,
+                fontWeight: 600,
+                color: C.textDark,
+                marginBottom: 8
+              }}>
+                Quantity ({unit})
+              </label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={selectedQty}
+                  onChange={e => setSelectedQty(parseFloat(e.target.value) || 0)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: `1px solid ${C.border}`,
+                    fontSize: 14,
+                    color: C.textDark
+                  }}
+                />
+                <div style={{ fontSize: 12, color: C.textLight }}>
+                  {formatQty(selectedQty, unit)}
+                </div>
+              </div>
+              {exceedsStock && (
+                <div style={{
+                  color: C.red,
+                  fontSize: 12,
+                  marginTop: 8
+                }}>
+                  Only {formatQty(stock, unit)} available. Please choose a smaller amount.
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={handleAddToCart}
+            disabled={outOfStock || addingId === product.id || exceedsStock}
+            style={{
+              width: '100%',
+              padding: '14px 0',
+              backgroundColor: outOfStock ? '#9e9e9e' : C.deepGreen,
+              color: '#fff',
+              border: 'none',
+              borderRadius: 10,
+              fontSize: 16,
+              fontWeight: 600,
+              cursor: outOfStock || exceedsStock ? 'not-allowed' : 'pointer',
+              opacity: addingId === product.id ? 0.7 : 1
+            }}
+          >
+            {outOfStock ? 'Out of Stock' : addingId === product.id ? 'Adding…' : 'Add to Cart'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PRODUCT CARD — with unit dropdown
 // ─────────────────────────────────────────────────────────────────────────────
-const ProductCard = ({ p, onAddToCart, addingId }) => {
+const ProductCard = ({ p, onAddToCart, addingId, onShowDetails }) => {
   const stock = Number(p.stock) || 0;
   const unit       = getProductUnit(p);
   const presets    = UNIT_PRESETS[unit] || UNIT_PRESETS.pcs;
@@ -302,7 +532,11 @@ const ProductCard = ({ p, onAddToCart, addingId }) => {
   const exceedsStock = selectedQty > stock;
 
   return (
-    <div className="prod-card" style={{ opacity: outOfStock ? 0.6 : 1 }}>
+    <div
+      className="prod-card"
+      style={{ opacity: outOfStock ? 0.6 : 1, cursor: 'pointer' }}
+      onClick={() => onShowDetails(p)}
+    >
       <div style={{ height:148, background:C.paleGreen, overflow:'hidden', position:'relative' }}>
         <img
           src={p.image || IMG_PLACEHOLDER}
@@ -324,18 +558,28 @@ const ProductCard = ({ p, onAddToCart, addingId }) => {
 
         {!outOfStock && (
           <>
-            <select
-              className="unit-select"
-              value={selectedQty}
-              onChange={e => setSelectedQty(Number(e.target.value))}
-            >
-              {presets.map(qty => (
-                <option key={qty} value={qty}>{formatQty(qty, unit)}</option>
-              ))}
-            </select>
+            <div style={{ marginBottom: 10 }}>
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={selectedQty}
+                onChange={e => setSelectedQty(parseFloat(e.target.value) || 0)}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: 6,
+                  border: `1px solid ${C.border}`,
+                  fontSize: 12,
+                  color: C.textDark,
+                  textAlign: 'center'
+                }}
+              />
+            </div>
             {exceedsStock && (
-              <div style={{ color: C.red, fontSize:12, marginBottom:10 }}>
-                Only {formatQty(stock, unit)} available. Please choose a smaller amount.
+              <div style={{ color: C.red, fontSize:10, marginBottom:8 }}>
+                Only {formatQty(stock, unit)} left
               </div>
             )}
           </>
@@ -343,7 +587,10 @@ const ProductCard = ({ p, onAddToCart, addingId }) => {
 
         <button
           className="atc-btn"
-          onClick={() => onAddToCart(p.id, p.name, selectedQty, unit)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddToCart(p.id, p.name, selectedQty, unit);
+          }}
           disabled={outOfStock || addingId === p.id || exceedsStock}
           style={{ background: outOfStock ? '#9e9e9e' : undefined }}
         >
@@ -476,7 +723,28 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
   const [heroVisible, setHeroVisible] = useState(false);
   const [heroMotto, setHeroMotto]     = useState('Enjoy personalized grocery picks and fast delivery to your door.');
   const [profileImage, setProfileImage] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showProductModal, setShowProductModal] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setHeroVisible(false);
+    const mottoOptions = ['Your grocery list, simplified.','Fresh market finds delivered fast.','Local produce picked just for you.','Shop today, receive fresh tomorrow.','Healthy groceries made easy.'];
+    setHeroMotto(mottoOptions[Math.floor(Math.random() * mottoOptions.length)]);
+    const timer = setTimeout(() => setHeroVisible(true), 30);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    axios.get(`${API_BASE_URL}/api/profile/`, { headers: { Authorization: `Token ${token}` } })
+      .then(res => setProfileImage(res.data.profile_image || null))
+      .catch(() => setProfileImage(null));
+  }, []);
+
+  useEffect(() => {
+    axios.get(`${API_BASE_URL}/api/categories/`).then(r => setCategories(r.data)).catch(()=>{});
 
   useEffect(() => {
     setHeroVisible(false);
@@ -523,6 +791,16 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
     finally { setAddingId(null); }
   };
 
+  const handleShowProductDetails = (product) => {
+    setSelectedProduct(product);
+    setShowProductModal(true);
+  };
+
+  const handleCloseProductModal = () => {
+    setShowProductModal(false);
+    setSelectedProduct(null);
+  };
+
   const displayProducts = selectedCategory ? products : products.slice(0, 8);
 
   return (
@@ -536,15 +814,14 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
           <Link to="/products" style={{color:C.midGreen,fontWeight:600,fontSize:13}}>See all →</Link>
         </div>
         <div style={{display:'flex',gap:14,overflowX:'auto',paddingBottom:8}}>
-          {categories.map(cat => (
-            <div key={cat.id} onClick={() => setSelectedCategory(selectedCategory===cat.id ? null : cat.id)}
-              style={{minWidth:110,background:'#fff',border:selectedCategory===cat.id?`2px solid ${C.deepGreen}`:`1px solid ${C.border}`,borderRadius:12,padding:'14px 10px',textAlign:'center',cursor:'pointer',flexShrink:0,transition:'border 0.15s'}}>
-              <div style={{height:56,borderRadius:8,marginBottom:10,overflow:'hidden',background:C.paleGreen}}>
-                <img src={cat.image||IMG_PLACEHOLDER} alt={cat.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.onerror=null;e.target.src=IMG_PLACEHOLDER;}}/>
+          {/* {categories.map((cat) => (
+            <div key={cat.id} onClick={() => setSelectedCategory(selectedCategory===cat.id ? null : cat.id)} style={{minWidth:110,background:'#fff',border:selectedCategory===cat.id?'2px solid #4CAF50':'1px solid #e0e0e0',borderRadius:12,padding:'14px 10px',textAlign:'center',cursor:'pointer',flexShrink:0}}>
+              <div style={{height:56,borderRadius:8,marginBottom:10,overflow:'hidden',background:'#f0f8f0'}}>
+                <img src={cat.image||IMG_PLACEHOLDER} alt={cat.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={(e) => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}/>
               </div>
-              <span style={{fontSize:13,fontWeight:600,color:C.textDark}}>{cat.name}</span>
+              <span style={{fontSize:13,fontWeight:600,color:'#333'}}>{cat.name}</span>
             </div>
-          ))}
+          ))} */}
         </div>
       </div>
 
@@ -561,17 +838,20 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))',gap:18}}>
             {[...Array(4)].map((_,i)=><SkeletonCard key={i}/>)}
           </div>
-        ) : displayProducts.length === 0 ? (
-          <div style={{textAlign:'center',padding:'40px',color:C.textMid}}>
-            <p style={{marginBottom:16}}>No products found.</p>
-            <button onClick={()=>setSelectedCategory(null)} style={{padding:'9px 22px',background:C.deepGreen,color:'#fff',border:'none',borderRadius:8,fontWeight:600,cursor:'pointer'}}>Show All</button>
-          </div>
         ) : (
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))',gap:18}}>
-            {displayProducts.map(p=><ProductCard key={p.id} p={p} onAddToCart={addToCart} addingId={addingId}/>)}
+            {/* {displayProducts.map((p) => <ProductCard key={p.id} p={p} onAddToCart={addToCart} addingId={addingId} onShowDetails={handleShowProductDetails} />)} */}
           </div>
         )}
       </div>
+
+      {/* <ProductDetailModal
+        product={selectedProduct}
+        isOpen={showProductModal}
+        onClose={handleCloseProductModal}
+        onAddToCart={addToCart}
+        addingId={addingId}
+      /> */}
     </div>
   );
 };
@@ -587,6 +867,8 @@ const ProductList = ({ showToast, onCartUpdated }) => {
   const [addingId, setAddingId]     = useState(null);
   const [search, setSearch]         = useState('');
   const [priceMax, setPriceMax]     = useState(500);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showProductModal, setShowProductModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => { axios.get(`${API_BASE_URL}/api/categories/`).then(r=>setCategories(r.data)).catch(()=>{}); }, []);
@@ -609,6 +891,16 @@ const ProductList = ({ showToast, onCartUpdated }) => {
     finally { setAddingId(null); }
   };
 
+  const handleShowProductDetails = (product) => {
+    setSelectedProduct(product);
+    setShowProductModal(true);
+  };
+
+  const handleCloseProductModal = () => {
+    setShowProductModal(false);
+    setSelectedProduct(null);
+  };
+
   const filtered = products.filter(p => (!search || p.name.toLowerCase().includes(search.toLowerCase())) && parseFloat(p.price) <= priceMax);
   const allCats  = [{ id: null, name: 'All Products' }, ...categories];
 
@@ -617,7 +909,7 @@ const ProductList = ({ showToast, onCartUpdated }) => {
       <aside className="sidebar" style={{width:200,flexShrink:0,background:C.cream,borderRight:`1px solid ${C.border}`,padding:'24px 14px',overflowY:'auto',display:'flex',flexDirection:'column'}}>
         <div style={{marginBottom:32}}>
           <div style={{fontSize:13,fontWeight:700,color:C.textDark,marginBottom:10,paddingLeft:4}}>Categories</div>
-          {allCats.map(cat=>(
+          {allCats.map((cat)=>(
             <button key={cat.id??'all'} className={`sidebar-btn${selectedCategory===cat.id?' active':''}`} onClick={()=>setSelectedCategory(cat.id)}>{cat.name}</button>
           ))}
         </div>
@@ -646,10 +938,18 @@ const ProductList = ({ showToast, onCartUpdated }) => {
           <div style={{textAlign:'center',padding:'60px 0',color:C.textMid}}>No products found.</div>
         ) : (
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(175px,1fr))',gap:18}}>
-            {filtered.map(p=><ProductCard key={p.id} p={p} onAddToCart={addToCart} addingId={addingId}/>)}
+            {filtered.map((p) => <ProductCard key={p.id} p={p} onAddToCart={addToCart} addingId={addingId} onShowDetails={handleShowProductDetails} />)}
           </div>
         )}
       </div>
+
+      <ProductDetailModal
+        product={selectedProduct}
+        isOpen={showProductModal}
+        onClose={handleCloseProductModal}
+        onAddToCart={addToCart}
+        addingId={addingId}
+      />
     </div>
   );
 };
@@ -931,7 +1231,7 @@ const Checkout = ({ showToast, onCartUpdated }) => {
             <div style={{background:'#fff',borderRadius:12,border:`1px solid ${C.border}`,padding:'22px 20px',position:'sticky',top:20}}>
               <h3 style={{fontSize:16,fontWeight:800,color:C.textDark,marginBottom:18}}>Order Summary</h3>
               <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
-                {cartItems.map(item=>(
+                {cartItems.map((item)=>(
                   <div key={item.id} style={{display:'flex',justifyContent:'space-between',fontSize:13,color:C.textMid}}>
                     <span style={{fontWeight:500}}>{item.product_name}{(item.quantity||1)>1?` ×${item.quantity||1}`:''} <span style={{color:C.textLight,fontWeight:400}}>({item.product_unit||'pcs'})</span></span>
                     <span style={{fontWeight:600,color:C.textDark}}>₱{(parseFloat(item.product_price||0)*(item.quantity||1)).toFixed(0)}</span>
