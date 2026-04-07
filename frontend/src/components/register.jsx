@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../api';
 
 const Register = () => {
   const [username, setUsername] = useState('');
@@ -16,7 +17,7 @@ const Register = () => {
       return;
     }
     try {
-      await axios.post('http://127.0.0.1:8000/api/register/', {
+      await axios.post(`${API_BASE_URL}/api/register/`, {
         username,
         email,
         password,
