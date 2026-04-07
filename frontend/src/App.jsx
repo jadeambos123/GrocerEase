@@ -33,6 +33,14 @@ const formatQty = (qty, unit) => {
   return `${qty} ${unit}`;
 };
 
+const getProductUnit = (product) => {
+  if (product.unit) return product.unit;
+  const name = (product.name || '').toLowerCase();
+  if (/chicken|beef|pork|meat|fish|salmon|steak|lamb|mutton|duck|turkey/.test(name)) return 'kg';
+  if (/milk|water|juice|soda|oil|vinegar|broth|sauce/.test(name)) return 'liter';
+  return 'pcs';
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -291,8 +299,8 @@ const StockBadge = ({ stock }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const ProductCard = ({ p, onAddToCart, addingId }) => {
   const outOfStock = p.stock === 0;
-  const unit       = p.unit || 'pcs';
-  const presets    = UNIT_PRESETS[unit] || [1, 2, 3];
+  const unit       = getProductUnit(p);
+  const presets    = UNIT_PRESETS[unit] || UNIT_PRESETS.pcs;
   const [selectedQty, setSelectedQty] = useState(presets[0]);
 
   return (
@@ -316,7 +324,6 @@ const ProductCard = ({ p, onAddToCart, addingId }) => {
           <span style={{ fontSize:11, fontWeight:500, color:C.textLight, marginLeft:4 }}>/ {unit}</span>
         </div>
 
-        {/* Unit Dropdown */}
         {!outOfStock && (
           <select
             className="unit-select"
