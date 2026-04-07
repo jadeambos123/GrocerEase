@@ -652,7 +652,9 @@ const ProductCard = ({ p, onAddToCart, addingId, onShowDetails }) => {
                   border: `1px solid ${C.border}`,
                   fontSize: 12,
                   color: C.textDark,
-                  textAlign: 'center'
+                  backgroundColor: '#fff',
+                  textAlign: 'center',
+                  outline: 'none'
                 }}
               />
             </div>
