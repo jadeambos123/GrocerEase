@@ -355,31 +355,42 @@ const ProductDetailModal = ({ product, isOpen, onClose, onAddToCart, addingId })
     }} onClick={onClose}>
       <div style={{
         backgroundColor: '#fff',
-        borderRadius: 16,
+        borderRadius: 20,
         maxWidth: 500,
         width: '100%',
         maxHeight: '90vh',
-        overflow: 'auto',
-        position: 'relative'
+        overflow: 'hidden',
+        position: 'relative',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        border: `1px solid ${C.border}`
       }} onClick={e => e.stopPropagation()}>
         <button
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: 16,
-            right: 16,
-            background: 'none',
-            border: 'none',
-            fontSize: 24,
+            top: 20,
+            right: 20,
+            background: 'rgba(255, 255, 255, 0.9)',
+            border: `1px solid ${C.border}`,
+            borderRadius: '50%',
+            width: 36,
+            height: 36,
+            fontSize: 18,
             cursor: 'pointer',
             color: C.textMid,
-            zIndex: 1
+            zIndex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s ease'
           }}
+          onMouseEnter={e => e.target.style.background = 'rgba(255, 255, 255, 1)'}
+          onMouseLeave={e => e.target.style.background = 'rgba(255, 255, 255, 0.9)'}
         >
           ×
         </button>
 
-        <div style={{ height: 300, overflow: 'hidden', position: 'relative' }}>
+        <div style={{ height: 280, overflow: 'hidden', position: 'relative' }}>
           <img
             src={product.image || IMG_PLACEHOLDER}
             alt={product.name}
@@ -394,13 +405,21 @@ const ProductDetailModal = ({ product, isOpen, onClose, onAddToCart, addingId })
           <StockBadge stock={stock} unit={unit} />
         </div>
 
-        <div style={{ padding: 24 }}>
+        <div style={{
+          padding: '28px 24px 24px',
+          maxHeight: '50vh',
+          overflowY: 'auto'
+        }}>
           {product.category_name && (
             <div style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: C.tagColor,
-              marginBottom: 8,
+              display: 'inline-block',
+              fontSize: 11,
+              fontWeight: 700,
+              color: C.midGreen,
+              backgroundColor: C.paleGreen,
+              padding: '4px 10px',
+              borderRadius: 12,
+              marginBottom: 12,
               textTransform: 'uppercase',
               letterSpacing: '0.5px'
             }}>
@@ -409,29 +428,56 @@ const ProductDetailModal = ({ product, isOpen, onClose, onAddToCart, addingId })
           )}
 
           <h2 style={{
-            fontSize: 24,
+            fontSize: 28,
             fontWeight: 800,
             color: C.textDark,
-            marginBottom: 8
+            marginBottom: 8,
+            lineHeight: 1.2
           }}>
             {product.name}
           </h2>
 
           <div style={{
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 700,
             color: C.deepGreen,
-            marginBottom: 16
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 4
           }}>
-            ₱{product.price}
+            <span>₱{product.price}</span>
             <span style={{
               fontSize: 14,
               fontWeight: 500,
-              color: C.textLight,
-              marginLeft: 4
+              color: C.textLight
             }}>
-              / {unit}
+              per {unit}
             </span>
+          </div>
+
+          {/* Stock Information */}
+          <div style={{
+            backgroundColor: outOfStock ? '#fef2f2' : stock <= 5 ? '#fefce8' : '#f0fdf4',
+            border: `1px solid ${outOfStock ? '#fecaca' : stock <= 5 ? '#fde047' : '#bbf7d0'}`,
+            borderRadius: 8,
+            padding: '12px 16px',
+            marginBottom: 20
+          }}>
+            <div style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: outOfStock ? '#dc2626' : stock <= 5 ? '#d97706' : '#166534',
+              marginBottom: 4
+            }}>
+              {outOfStock ? 'Out of Stock' : stock <= 5 ? 'Limited Stock' : 'In Stock'}
+            </div>
+            <div style={{
+              fontSize: 13,
+              color: outOfStock ? '#991b1b' : stock <= 5 ? '#92400e' : '#14532d'
+            }}>
+              {outOfStock ? 'This product is currently unavailable' : `${formatQty(stock, unit)} available`}
+            </div>
           </div>
 
           <div style={{ marginBottom: 20 }}>
@@ -457,14 +503,22 @@ const ProductDetailModal = ({ product, isOpen, onClose, onAddToCart, addingId })
             <div style={{ marginBottom: 24 }}>
               <label style={{
                 display: 'block',
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 600,
                 color: C.textDark,
-                marginBottom: 8
+                marginBottom: 10
               }}>
-                Quantity ({unit})
+                Quantity
               </label>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{
+                display: 'flex',
+                gap: 12,
+                alignItems: 'center',
+                backgroundColor: '#f8fafc',
+                padding: '16px',
+                borderRadius: 12,
+                border: `1px solid ${C.border}`
+              }}>
                 <input
                   type="number"
                   min="0.1"
@@ -473,24 +527,34 @@ const ProductDetailModal = ({ product, isOpen, onClose, onAddToCart, addingId })
                   onChange={e => setSelectedQty(parseFloat(e.target.value) || 0)}
                   style={{
                     flex: 1,
-                    padding: '10px 12px',
+                    padding: '12px 14px',
                     borderRadius: 8,
                     border: `1px solid ${C.border}`,
                     fontSize: 14,
-                    color: C.textDark
+                    color: C.textDark,
+                    backgroundColor: '#fff',
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease'
                   }}
                 />
-                <div style={{ fontSize: 12, color: C.textLight }}>
+                <div style={{
+                  fontSize: 13,
+                  color: C.textMid,
+                  fontWeight: 500,
+                  minWidth: 60,
+                  textAlign: 'center'
+                }}>
                   {formatQty(selectedQty, unit)}
                 </div>
               </div>
               {exceedsStock && (
                 <div style={{
                   color: C.red,
-                  fontSize: 12,
-                  marginTop: 8
+                  fontSize: 13,
+                  marginTop: 8,
+                  fontWeight: 500
                 }}>
-                  Only {formatQty(stock, unit)} available. Please choose a smaller amount.
+                  ⚠️ Only {formatQty(stock, unit)} available. Please choose a smaller amount.
                 </div>
               )}
             </div>
@@ -501,15 +565,30 @@ const ProductDetailModal = ({ product, isOpen, onClose, onAddToCart, addingId })
             disabled={outOfStock || addingId === product.id || exceedsStock}
             style={{
               width: '100%',
-              padding: '14px 0',
-              backgroundColor: outOfStock ? '#9e9e9e' : C.deepGreen,
-              color: '#fff',
+              padding: '16px 0',
+              backgroundColor: outOfStock ? '#f3f4f6' : C.deepGreen,
+              color: outOfStock ? C.textMid : '#fff',
               border: 'none',
-              borderRadius: 10,
+              borderRadius: 12,
               fontSize: 16,
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: outOfStock || exceedsStock ? 'not-allowed' : 'pointer',
-              opacity: addingId === product.id ? 0.7 : 1
+              opacity: addingId === product.id ? 0.7 : 1,
+              transition: 'all 0.2s ease',
+              boxShadow: outOfStock ? 'none' : '0 4px 12px rgba(30, 77, 43, 0.3)',
+              transform: 'translateY(0)'
+            }}
+            onMouseEnter={e => {
+              if (!outOfStock && !exceedsStock) {
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 6px 16px rgba(30, 77, 43, 0.4)';
+              }
+            }}
+            onMouseLeave={e => {
+              if (!outOfStock && !exceedsStock) {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 12px rgba(30, 77, 43, 0.3)';
+              }
             }}
           >
             {outOfStock ? 'Out of Stock' : addingId === product.id ? 'Adding…' : 'Add to Cart'}
