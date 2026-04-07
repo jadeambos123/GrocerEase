@@ -326,9 +326,9 @@ const ProductsTab = ({ showToast }) => {
   const openEdit = (p) => {
     setEditing(p);
     setForm({ name: p.name, price: p.price, stock: p.stock, category: p.category || '', unit: p.unit || 'pcs', description: p.description || '', image: p.image || '' });
-    setImageSource(p.image ? 'url' : 'url');
+    setImageSource('url');
     setImageFile(null);
-    setImagePreview('');
+    setImagePreview(p.image || '');
     setModalOpen(true);
   };
 
@@ -359,7 +359,15 @@ const ProductsTab = ({ showToast }) => {
         payload.append('description', form.description);
         payload.append('image', imageFile);
       } else {
-        payload = { ...form, price: parseFloat(form.price), stock: parseInt(form.stock) || 0 };
+        payload = {
+          name: form.name,
+          price: parseFloat(form.price),
+          stock: parseInt(form.stock) || 0,
+          category: form.category,
+          unit: form.unit,
+          description: form.description,
+          remote_image_url: form.image || '',
+        };
       }
 
       if (editing) {
