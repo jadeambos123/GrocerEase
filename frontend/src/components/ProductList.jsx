@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../api';
 
 const styles = {
   page: { padding: '32px', background: '#f5f5f5', minHeight: '100vh' },
@@ -21,15 +22,15 @@ const ProductList = () => {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    axios.get('http://127.0.0.1:8000/api/categories/') // Make sure you have this endpoint!
+    axios.get(`${API_BASE_URL}/api/categories/`) // Make sure you have this endpoint!
       .then(() => {})
       .catch(() => console.log('Category fetch failed'));
   }, []);
 
   useEffect(() => {
     const url = selectedCategory 
-      ? `http://127.0.0.1:8000/api/products/?category=${selectedCategory}`
-      : 'http://127.0.0.1:8000/api/products/';
+      ? `${API_BASE_URL}/api/products/?category=${selectedCategory}`
+      : `${API_BASE_URL}/api/products/`;
 
     axios.get(url)
       .then(res => setProducts(res.data))
@@ -39,7 +40,7 @@ const ProductList = () => {
   const addToCart = async (productId) => {
     if (!token) { navigate('/login'); return; }
     try {
-      await axios.post('http://127.0.0.1:8000/api/cart/add/', { product_id: productId, quantity: 1 }, { headers: { Authorization: `Token ${token}` } });
+      await axios.post(`${API_BASE_URL}/api/cart/add/`, { product_id: productId, quantity: 1 }, { headers: { Authorization: `Token ${token}` } });
       alert('Added to cart');
     } catch (err) {
       console.error(err);
