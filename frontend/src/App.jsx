@@ -764,14 +764,24 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
   }, []);
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/categories/`).then(r => setCategories(r.data)).catch(()=>{});
+    axios.get(`${API_BASE_URL}/api/categories/`)
+      .then(r => {
+        const data = r.data;
+        const categoriesArray = Array.isArray(data) ? data : (data.results || []);
+        setCategories(categoriesArray);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
     setLoading(true);
     const url = selectedCategory ? `${API_BASE_URL}/api/products/?category=${selectedCategory}` : `${API_BASE_URL}/api/products/`;
     axios.get(url)
-      .then(r => setProducts(Array.isArray(r.data) ? r.data : []))
+      .then(r => {
+        const data = r.data;
+        const productsArray = Array.isArray(data) ? data : (data.results || []);
+        setProducts(productsArray);
+      })
       .catch(() => showToast('Could not load products.', 'error'))
       .finally(() => setLoading(false));
   }, [selectedCategory, showToast]);
@@ -815,14 +825,14 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
           <Link to="/products" style={{color:C.midGreen,fontWeight:600,fontSize:13}}>See all →</Link>
         </div>
         <div style={{display:'flex',gap:14,overflowX:'auto',paddingBottom:8}}>
-          {/* {categories.map((cat) => (
+          {categories.map((cat) => (
             <div key={cat.id} onClick={() => setSelectedCategory(selectedCategory===cat.id ? null : cat.id)} style={{minWidth:110,background:'#fff',border:selectedCategory===cat.id?'2px solid #4CAF50':'1px solid #e0e0e0',borderRadius:12,padding:'14px 10px',textAlign:'center',cursor:'pointer',flexShrink:0}}>
               <div style={{height:56,borderRadius:8,marginBottom:10,overflow:'hidden',background:'#f0f8f0'}}>
                 <img src={cat.image||IMG_PLACEHOLDER} alt={cat.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={(e) => { e.target.onerror = null; e.target.src = IMG_PLACEHOLDER; }}/>
               </div>
               <span style={{fontSize:13,fontWeight:600,color:'#333'}}>{cat.name}</span>
             </div>
-          ))} */}
+          ))}
         </div>
       </div>
 
@@ -839,20 +849,25 @@ const HomePage = ({ showToast, onCartUpdated, displayName }) => {
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))',gap:18}}>
             {[...Array(4)].map((_,i)=><SkeletonCard key={i}/>)}
           </div>
+        ) : displayProducts.length === 0 ? (
+          <div style={{textAlign:'center',padding:'40px',color:C.textMid}}>
+            <p style={{marginBottom:16}}>No products found.</p>
+            <button onClick={()=>setSelectedCategory(null)} style={{padding:'9px 22px',background:C.deepGreen,color:'#fff',border:'none',borderRadius:8,fontWeight:600,cursor:'pointer'}}>Show All</button>
+          </div>
         ) : (
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))',gap:18}}>
-            {/* {displayProducts.map((p) => <ProductCard key={p.id} p={p} onAddToCart={addToCart} addingId={addingId} onShowDetails={handleShowProductDetails} />)} */}
+            {displayProducts.map((p) => <ProductCard key={p.id} p={p} onAddToCart={addToCart} addingId={addingId} onShowDetails={handleShowProductDetails} />)}
           </div>
         )}
       </div>
 
-      {/* <ProductDetailModal
+      <ProductDetailModal
         product={selectedProduct}
         isOpen={showProductModal}
         onClose={handleCloseProductModal}
         onAddToCart={addToCart}
         addingId={addingId}
-      /> */}
+      />
     </div>
   );
 };
