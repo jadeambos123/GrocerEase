@@ -304,6 +304,9 @@ const ProductsTab = ({ showToast }) => {
 
   const blank = { name: '', price: '', stock: '', category: '', unit: 'pcs', description: '', image: '' };
   const [form, setForm] = useState(blank);
+  const [imageSource, setImageSource] = useState('url');
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -319,26 +322,62 @@ const ProductsTab = ({ showToast }) => {
 
   useEffect(() => { load(); }, [load]);
 
-  const openAdd  = ()  => { setEditing(null); setForm(blank); setModalOpen(true); };
-  const openEdit = (p) => { setEditing(p); setForm({ name: p.name, price: p.price, stock: p.stock, category: p.category || '', unit: p.unit || 'pcs', description: p.description || '', image: p.image || '' }); setModalOpen(true); };
+  const openAdd  = ()  => { setEditing(null); setForm(blank); setImageSource('url'); setImageFile(null); setImagePreview(''); setModalOpen(true); };
+  const openEdit = (p) => {
+    setEditing(p);
+    setForm({ name: p.name, price: p.price, stock: p.stock, category: p.category || '', unit: p.unit || 'pcs', description: p.description || '', image: p.image || '' });
+    setImageSource(p.image ? 'url' : 'url');
+    setImageFile(null);
+    setImagePreview('');
+    setModalOpen(true);
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageSource('upload');
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setForm(f => ({ ...f, image: '' }));
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.name || !form.price) { showToast('Name and price are required', 'error'); return; }
     setSaving(true);
     try {
-      const payload = { ...form, price: parseFloat(form.price), stock: parseInt(form.stock) || 0 };
+      let payload;
+      const config = { headers: { Authorization: `Token ${token}` } };
+
+      if (imageSource === 'upload' && imageFile) {
+        payload = new FormData();
+        payload.append('name', form.name);
+        payload.append('price', parseFloat(form.price));
+        payload.append('stock', parseInt(form.stock) || 0);
+        payload.append('category', form.category);
+        payload.append('unit', form.unit);
+        payload.append('description', form.description);
+        payload.append('image', imageFile);
+        config.headers['Content-Type'] = 'multipart/form-data';
+      } else {
+        payload = { ...form, price: parseFloat(form.price), stock: parseInt(form.stock) || 0 };
+      }
+
       if (editing) {
-        await axios.put(`${API_BASE_URL}/api/admin/products/${editing.id}/`, payload, { headers: { Authorization: `Token ${token}` } });
+        await axios.put(`${API_BASE_URL}/api/admin/products/${editing.id}/`, payload, config);
         showToast('Product updated!', 'success');
       } else {
-        await axios.post(`${API_BASE_URL}/api/admin/products/`, payload, { headers: { Authorization: `Token ${token}` } });
+        await axios.post(`${API_BASE_URL}/api/admin/products/`, payload, config);
         showToast('Product added!', 'success');
       }
+
       setModalOpen(false);
       load();
-    } catch { showToast('Failed to save product', 'error'); }
-    finally { setSaving(false); }
+    } catch {
+      showToast('Failed to save product', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -454,8 +493,30 @@ const ProductsTab = ({ showToast }) => {
             </div>
           </FormField>
 
-          <FormField label="Image URL">
-            <Input value={form.image} onChange={e => setForm(f => ({ ...f, image: e.target.value }))} placeholder="https://…" />
+          <FormField label="Image source">
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+              {['url', 'upload'].map(source => (
+                <label key={source} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, border: `1px solid ${imageSource === source ? C.deepGreen : C.border}`, background: imageSource === source ? C.paleGreen : '#fff', cursor: 'pointer', fontSize: 13, color: C.textDark }}>
+                  <input type="radio" name="imageSource" value={source} checked={imageSource === source}
+                    onChange={() => { setImageSource(source); if (source === 'url') { setImageFile(null); setImagePreview(''); } }}
+                    style={{ cursor: 'pointer' }} />
+                  {source === 'url' ? 'Image URL' : 'Upload from device'}
+                </label>
+              ))}
+            </div>
+            {imageSource === 'url' ? (
+              <Input value={form.image} onChange={e => setForm(f => ({ ...f, image: e.target.value }))} placeholder="https://…" />
+            ) : (
+              <div style={{ display: 'grid', gap: 10 }}>
+                <Input type="file" accept="image/*" onChange={handleImageChange} style={{ padding: '8px 12px' }} />
+                {(imagePreview || form.image) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, background: '#f7f7f7', borderRadius: 10 }}>
+                    <img src={imagePreview || form.image} alt="Preview" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 10, border: `1px solid ${C.border}` }} />
+                    <div style={{ fontSize: 13, color: C.textMid }}>Preview of the selected product image.</div>
+                  </div>
+                )}
+              </div>
+            )}
           </FormField>
 
           <FormField label="Description">
