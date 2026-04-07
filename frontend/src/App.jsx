@@ -4,7 +4,7 @@ import axios from 'axios';
 import OrdersPage from './components/Orders';
 import ProfilePage from './components/Profile';
 import AdminDashboard from './components/AdminDashboard';
-import LoginPage from './components/Login';
+import LoginPage from './components/login';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // API BASE URL
