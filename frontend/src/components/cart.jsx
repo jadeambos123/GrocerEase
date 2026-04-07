@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../api';
 
 const styles = {
   page: { padding: '32px', background: '#f5f5f5', minHeight: '100vh' },
@@ -16,7 +17,7 @@ const Cart = () => {
 
   useEffect(() => {
     if (token) {
-      axios.get('http://127.0.0.1:8000/api/cart/', {
+      axios.get(`${API_BASE_URL}/api/cart/`, {
         headers: { Authorization: `Token ${token}` }
       })
       .then(res => setCartItems(res.data))
