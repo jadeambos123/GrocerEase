@@ -4,6 +4,7 @@ import axios from 'axios';
 import OrdersPage from './components/Orders';
 import ProfilePage from './components/Profile';
 import AdminDashboard from './components/AdminDashboard';
+import LoginPage from './components/Login';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // API BASE URL
@@ -644,72 +645,6 @@ const ProductList = ({ showToast, onCartUpdated }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // LOGIN
 // ─────────────────────────────────────────────────────────────────────────────
-const Login = ({ onLoginSuccess, showToast }) => {
-  const [identifier, setIdentifier]     = useState('');
-  const [password, setPassword]         = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading]           = useState(false);
-  const navigate = useNavigate();
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await axios.post(`${API_BASE_URL}/api-token-auth/`, { username: identifier, password });
-      localStorage.setItem('token', res.data.token);
-      // Fetch profile to get is_staff
-      const profile = await axios.get(`${API_BASE_URL}/api/profile/`, { headers: { Authorization: `Token ${res.data.token}` } });
-      localStorage.setItem('isAdmin', profile.data.is_staff ? 'true' : 'false');
-      onLoginSuccess(identifier, profile.data.is_staff);
-      showToast(`Welcome back! 👋`, 'success');
-      navigate('/');
-    } catch { showToast('Login failed. Please check your credentials.', 'error'); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <div style={{flex:1,display:'flex',justifyContent:'center',alignItems:'center',padding:'60px 20px',background:C.cream,overflowY:'auto'}}>
-      <div className="auth-card" style={{background:'#fff',borderRadius:18,padding:'44px 40px',width:'100%',maxWidth:420,border:`1px solid ${C.border}`,boxShadow:'0 4px 32px rgba(30,77,43,0.08)'}}>
-        <div style={{display:'flex',justifyContent:'center',marginBottom:18}}>
-          <div style={{width:58,height:58,background:C.deepGreen,borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="3" width="20" height="18" rx="3"/><path d="M16 10a4 4 0 01-8 0"/>
-            </svg>
-          </div>
-        </div>
-        <h2 style={{textAlign:'center',fontSize:22,fontWeight:800,color:C.textDark,marginBottom:6}}>Welcome Back</h2>
-        <p style={{textAlign:'center',fontSize:14,color:C.textLight,marginBottom:28}}>Log in to your GrocerEase account</p>
-        <form onSubmit={handleLogin} style={{display:'flex',flexDirection:'column',gap:16}}>
-          <div>
-            <label style={{display:'block',fontSize:13,fontWeight:600,color:C.textDark,marginBottom:7}}>Email or Username</label>
-            <input className="form-input" type="text" placeholder="user@email.com" value={identifier} onChange={e=>setIdentifier(e.target.value)} required/>
-          </div>
-          <div>
-            <label style={{display:'block',fontSize:13,fontWeight:600,color:C.textDark,marginBottom:7}}>Password</label>
-            <div style={{position:'relative'}}>
-              <input className="form-input" type={showPassword?'text':'password'} placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} required style={{paddingRight:60}}/>
-              <button type="button" onClick={()=>setShowPassword(!showPassword)} style={{position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',color:C.midGreen,fontSize:13,fontWeight:600,cursor:'pointer'}}>
-                {showPassword ? 'Hide' : 'Show'}
-              </button>
-            </div>
-            <div style={{textAlign:'right',marginTop:7}}>
-              <span style={{fontSize:13,color:C.midGreen,fontWeight:600,cursor:'pointer'}}>Forgot password?</span>
-            </div>
-          </div>
-          <button type="submit" className="primary-btn" disabled={loading} style={{marginTop:4}}>
-            {loading ? 'Signing in…' : 'Log In'}
-          </button>
-        </form>
-        <p style={{textAlign:'center',fontSize:13,color:C.textLight,marginTop:20}}>
-          Don't have an account? <Link to="/register" style={{color:C.midGreen,fontWeight:700}}>Register here</Link>
-        </p>
-      </div>
-    </div>
-  );
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// REGISTER
 // ─────────────────────────────────────────────────────────────────────────────
 const Register = ({ showToast }) => {
   const [firstName, setFirstName]             = useState('');
@@ -1079,7 +1014,7 @@ export default function App() {
           <Routes>
             <Route path="/"         element={<HomePage      showToast={showToast} onCartUpdated={loadCartCount} displayName={displayName}/>}/>
             <Route path="/products" element={<ProductList   showToast={showToast} onCartUpdated={loadCartCount}/>}/>
-            <Route path="/login"    element={<Login         onLoginSuccess={handleLoginSuccess} showToast={showToast}/>}/>
+            <Route path="/login"    element={<LoginPage onLoginSuccess={handleLoginSuccess}/>}/>
             <Route path="/register" element={<Register      showToast={showToast}/>}/>
             <Route path="/cart"     element={<Cart          showToast={showToast} onCartUpdated={loadCartCount}/>}/>
             <Route path="/checkout" element={<Checkout      showToast={showToast} onCartUpdated={loadCartCount}/>}/>
